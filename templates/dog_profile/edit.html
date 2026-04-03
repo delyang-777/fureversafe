@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ dog.name }} - FurEverSafe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h4 class="mb-0"><i class="fas fa-edit"></i> Edit Dog Profile: {{ dog.name }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                            {% for error in form.name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.breed.label(class="form-label") }}
+                            {{ form.breed(class="form-control") }}
+                            {% for error in form.breed.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.age.label(class="form-label") }}
+                                {{ form.age(class="form-control") }}
+                                {% for error in form.age.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.weight.label(class="form-label") }}
+                                {{ form.weight(class="form-control") }}
+                                {% for error in form.weight.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.microchip_id.label(class="form-label") }}
+                            {{ form.microchip_id(class="form-control") }}
+                            {% for error in form.microchip_id.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Current Photo</label>
+                            {% if dog.photo %}
+                                <div class="mb-2">
+                                    <img src="{{ url_for('static', filename='uploads/' + dog.photo) }}" 
+                                         alt="{{ dog.name }}" 
+                                         style="max-width: 200px; max-height: 200px; border-radius: 10px;">
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No photo uploaded yet</p>
+                            {% endif %}
+                            {{ form.photo.label(class="form-label") }}
+                            {{ form.photo(class="form-control") }}
+                            <div class="form-text">Upload a new photo to replace the current one (optional)</div>
+                            {% for error in form.photo.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Note:</strong> Health records, vaccinations, and appointments will be preserved when updating profile information.
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update Profile
+                            </button>
+                            <a href="{{ url_for('view_dog', dog_id=dog.id) }}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Danger Zone -->
+            <div class="card mt-4 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Danger Zone</h5>
+                </div>
+                <div class="card-body">
+                    <p>Once you delete this dog profile, all associated health records, vaccinations, and appointments will be permanently removed.</p>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash"></i> Delete Dog Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong>{{ dog.name }}</strong>'s profile?</p>
+                <p class="text-danger">This action cannot be undone!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_dog', dog_id=dog.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Yes, Delete Profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview new photo before upload
+    document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+        if (e.target.files && e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let preview = document.querySelector('.image-preview');
+                if (!preview) {
+                    preview = document.createElement('div');
+                    preview.className = 'image-preview mt-2';
+                    const fileInput = document.querySelector('input[type="file"]');
+                    fileInput.parentNode.appendChild(preview);
+                }
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 10px;">`;
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+</script>
+{% endblock %}

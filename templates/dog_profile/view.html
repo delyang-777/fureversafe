@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}{{ dog.name }} - Dog Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                {% if dog.photo %}
+                <img src="{{ url_for('static', filename='uploads/' + dog.photo) }}" class="card-img-top" alt="{{ dog.name }}">
+                {% else %}
+                <img src="https://via.placeholder.com/400x300?text={{ dog.name }}" class="card-img-top" alt="{{ dog.name }}">
+                {% endif %}
+                <div class="card-body">
+                    <h4>{{ dog.name }}</h4>
+                    <p class="text-muted">{{ dog.breed }}</p>
+                    <hr>
+                    <p><strong>Age:</strong> {{ dog.age }} years</p>
+                    <p><strong>Weight:</strong> {{ dog.weight }} kg</p>
+                    <p><strong>Microchip ID:</strong> {{ dog.microchip_id or 'Not registered' }}</p>
+                    {% if current_user.id == dog.owner_id %}
+                    <a href="{{ url_for('edit_dog', dog_id=dog.id) }}" class="btn btn-warning">Edit Profile</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <ul class="nav nav-tabs" id="dogTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#health">Health Records</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#vaccinations">Vaccinations</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#appointments">Appointments</button>
+                </li>
+            </ul>
+            
+            <div class="tab-content mt-3">
+                <!-- Health Records Tab -->
+                <div class="tab-pane fade show active" id="health">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Health Records</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if health_records %}
+                                <div class="list-group">
+                                    {% for record in health_records %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="mb-1">{{ record.record_type }}</h6>
+                                            <small>{{ record.date.strftime('%Y-%m-%d') }}</small>
+                                        </div>
+                                        <p class="mb-1">{{ record.description }}</p>
+                                        <small>Vet: {{ record.vet_name or 'N/A' }}</small>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p>No health records yet.</p>
+                            {% endif %}
+                            
+                            {% if current_user.user_type in ['owner', 'vet'] %}
+                            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addHealthModal">Add Health Record</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Vaccinations Tab -->
+                <div class="tab-pane fade" id="vaccinations">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Vaccination Records</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if vaccinations %}
+                                <div class="list-group">
+                                    {% for vac in vaccinations %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="mb-1">{{ vac.vaccine_name }}</h6>
+                                            <span class="badge bg-{{ 'success' if vac.next_due_date and vac.next_due_date > now else 'danger' }}">
+                                                {{ 'Up to date' if vac.next_due_date and vac.next_due_date > now else 'Due' }}
+                                            </span>
+                                        </div>
+                                        <p class="mb-1">Administered: {{ vac.date_administered.strftime('%Y-%m-%d') }}</p>
+                                        {% if vac.next_due_date %}
+                                        <small>Next Due: {{ vac.next_due_date.strftime('%Y-%m-%d') }}</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p>No vaccination records yet.</p>
+                            {% endif %}
+                            
+                            {% if current_user.user_type in ['owner', 'vet'] %}
+                            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addVaccinationModal">Add Vaccination</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Appointments Tab -->
+                <div class="tab-pane fade" id="appointments">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Scheduled Appointments</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if appointments %}
+                                <div class="list-group">
+                                    {% for apt in appointments %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="mb-1">{{ apt.appointment_type }}</h6>
+                                            <span class="badge bg-{{ 'success' if apt.appointment_date > now else 'secondary' }}">
+                                                {{ 'Upcoming' if apt.appointment_date > now else 'Past' }}
+                                            </span>
+                                        </div>
+                                        <p class="mb-1">Date: {{ apt.appointment_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                                        <p class="mb-1">Vet: {{ apt.vet_name }}</p>
+                                        {% if apt.notes %}
+                                        <small>{{ apt.notes }}</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p>No appointments scheduled.</p>
+                            {% endif %}
+                            
+                            {% if current_user.user_type in ['owner', 'vet'] %}
+                            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addAppointmentModal">Schedule Appointment</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+{% if current_user.user_type in ['owner', 'vet'] %}
+<!-- Add Health Record Modal -->
+<div class="modal fade" id="addHealthModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Add Health Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_health_record', dog_id=dog.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Record Type *</label>
+                        <select name="record_type" class="form-control" required>
+                            <option value="">Select record type</option>
+                            <option value="Checkup">Regular Checkup</option>
+                            <option value="Surgery">Surgery</option>
+                            <option value="Dental">Dental Care</option>
+                            <option value="Lab Test">Lab Test</option>
+                            <option value="Emergency">Emergency Visit</option>
+                            <option value="Medication">Medication Prescribed</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description *</label>
+                        <textarea name="description" class="form-control" rows="3" required placeholder="Describe the health record details..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date *</label>
+                        <input type="datetime-local" name="date" class="form-control" required id="health_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Veterinarian Name</label>
+                        <input type="text" name="vet_name" class="form-control" placeholder="Name of the veterinarian">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Any additional information..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Health Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set default date to current date and time
+    const healthDateInput = document.getElementById('health_date');
+    if (healthDateInput) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        healthDateInput.value = now.toISOString().slice(0, 16);
+    }
+</script>
+
+<!-- Add Vaccination Modal -->
+<div class="modal fade" id="addVaccinationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Add Vaccination Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_vaccination', dog_id=dog.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Vaccine Name *</label>
+                        <input type="text" name="vaccine_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date Administered *</label>
+                        <input type="datetime-local" name="date_administered" class="form-control" required id="vaccine_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Next Due Date</label>
+                        <input type="datetime-local" name="next_due_date" class="form-control" id="next_due_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Administered By</label>
+                        <input type="text" name="administered_by" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Save Vaccination</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set default dates
+    const vaccineDateInput = document.getElementById('vaccine_date');
+    if (vaccineDateInput) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        vaccineDateInput.value = now.toISOString().slice(0, 16);
+    }
+    
+    // Set next due date to 1 year from now for vaccines
+    const nextDueDateInput = document.getElementById('next_due_date');
+    if (nextDueDateInput) {
+        const oneYearLater = new Date();
+        oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+        oneYearLater.setMinutes(oneYearLater.getMinutes() - oneYearLater.getTimezoneOffset());
+        nextDueDateInput.value = oneYearLater.toISOString().slice(0, 16);
+    }
+</script>
+
+<!-- Add Appointment Modal -->
+<div class="modal fade" id="addAppointmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Schedule Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_appointment', dog_id=dog.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Appointment Type *</label>
+                        <input type="text" name="appointment_type" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Appointment Date & Time *</label>
+                        <input type="datetime-local" name="appointment_date" class="form-control" required id="appointment_date">
+                        <div class="form-text">Please select a future date and time</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Veterinarian Name</label>
+                        <input type="text" name="vet_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Location</label>
+                        <input type="text" name="location" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Schedule Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set default date to tomorrow
+    const appointmentDateInput = document.getElementById('appointment_date');
+    if (appointmentDateInput) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(10, 0, 0, 0); // Set to 10:00 AM
+        tomorrow.setMinutes(tomorrow.getMinutes() - tomorrow.getTimezoneOffset());
+        appointmentDateInput.value = tomorrow.toISOString().slice(0, 16);
+    }
+</script>
+{% endif %}
+
+{% block scripts %}
+<script>
+    // Set default date for datetime inputs
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const dateTimeInputs = document.querySelectorAll('input[type="datetime-local"]');
+    dateTimeInputs.forEach(input => {
+        if (!input.value) {
+            input.value = now.toISOString().slice(0, 16);
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

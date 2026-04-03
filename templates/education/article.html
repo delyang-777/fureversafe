@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}{{ resource.title }} - FurEverSafe Education{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Article Header -->
+            <div class="card mb-4">
+                {% if resource.thumbnail %}
+                <img src="{{ url_for('static', filename='uploads/' + resource.thumbnail) }}" 
+                     class="card-img-top" 
+                     alt="{{ resource.title }}"
+                     style="max-height: 400px; object-fit: cover;">
+                {% endif %}
+                
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-primary">{{ resource.category|capitalize }}</span>
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-eye"></i> {{ resource.views }} views
+                        </span>
+                    </div>
+                    
+                    <h1 class="card-title display-5">{{ resource.title }}</h1>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            <i class="fas fa-user"></i> 
+                            <strong>{{ resource.author or 'FurEverSafe Team' }}</strong>
+                        </div>
+                        <div class="text-muted">
+                            <i class="fas fa-calendar-alt"></i> 
+                            {{ resource.created_at.strftime('%B %d, %Y') }}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Article Content -->
+                    <div class="article-content mt-4">
+                        {{ resource.content|safe }}
+                    </div>
+                    
+                    <hr class="mt-5">
+                    
+                    <!-- Social Share Buttons -->
+                    <div class="row mt-4">
+                        <div class="col text-center">
+                            <h6>Share this article:</h6>
+                            <button class="btn btn-outline-primary btn-sm" onclick="shareOnSocial('facebook')">
+                                <i class="fab fa-facebook-f"></i> Facebook
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="shareOnSocial('twitter')">
+                                <i class="fab fa-twitter"></i> Twitter
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="shareOnSocial('linkedin')">
+                                <i class="fab fa-linkedin-in"></i> LinkedIn
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="copyArticleLink()">
+                                <i class="fas fa-link"></i> Copy Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Related Articles -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-book-open"></i> Related Articles</h5>
+                </div>
+                <div class="card-body">
+                    <div id="related-articles">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Call to Action -->
+            <div class="alert alert-info mt-4 text-center">
+                <h5><i class="fas fa-graduation-cap"></i> Want to learn more?</h5>
+                <p>Explore our complete collection of educational resources on dog care and welfare.</p>
+                <a href="{{ url_for('education_resources') }}" class="btn btn-primary">
+                    Browse All Resources <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reading Progress Bar -->
+<div id="reading-progress" style="position: fixed; top: 0; left: 0; width: 0%; height: 3px; background: #4CAF50; z-index: 9999; transition: width 0.3s;"></div>
+
+{% block scripts %}
+<script>
+    // Reading progress bar
+    window.addEventListener('scroll', function() {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        document.getElementById('reading-progress').style.width = scrolled + '%';
+    });
+    
+    // Load related articles
+    function loadRelatedArticles() {
+        const category = '{{ resource.category }}';
+        const currentId = {{ resource.id }};
+        
+        $.ajax({
+            url: '/api/related-articles',
+            method: 'GET',
+            data: {
+                category: category,
+                exclude: currentId
+            },
+            success: function(data) {
+                displayRelatedArticles(data);
+            },
+            error: function() {
+                $('#related-articles').html('<div class="alert alert-info">No related articles found.</div>');
+            }
+        });
+    }
+    
+    function displayRelatedArticles(articles) {
+        const container = $('#related-articles');
+        container.empty();
+        
+        if (articles.length === 0) {
+            container.html('<div class="alert alert-info">No related articles available at this time.</div>');
+            return;
+        }
+        
+        let html = '<div class="row">';
+        articles.forEach(function(article) {
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <span class="badge bg-primary mb-2">${article.category}</span>
+                            <h6 class="card-title">${article.title}</h6>
+                            <p class="card-text small">${article.content.substring(0, 100)}...</p>
+                            <a href="/education/${article.id}" class="btn btn-sm btn-outline-primary">Read More</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.html(html);
+    }
+    
+    // Social sharing functions
+    function shareOnSocial(platform) {
+        const url = encodeURIComponent(window.location.href);
+        const title = encodeURIComponent('{{ resource.title }}');
+        
+        let shareUrl = '';
+        switch(platform) {
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+                break;
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?text=${title}&url=${url}`;
+                break;
+            case 'linkedin':
+                shareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${title}`;
+                break;
+        }
+        
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+    
+    function copyArticleLink() {
+        const tempInput = document.createElement('input');
+        tempInput.value = window.location.href;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        
+        // Show notification
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success position-fixed bottom-0 end-0 m-3';
+        notification.style.zIndex = '9999';
+        notification.innerHTML = '<i class="fas fa-check-circle"></i> Link copied to clipboard!';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+    
+    // Add table styling and responsive wrapper
+    document.addEventListener('DOMContentLoaded', function() {
+        const tables = document.querySelectorAll('.article-content table');
+        tables.forEach(table => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'table-responsive';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        });
+        
+        // Add image styling
+        const images = document.querySelectorAll('.article-content img');
+        images.forEach(img => {
+            img.className = 'img-fluid rounded my-3';
+        });
+        
+        // Load related articles
+        loadRelatedArticles();
+    });
+    
+    // Track reading time
+    let startTime = Date.now();
+    window.addEventListener('beforeunload', function() {
+        const readingTime = Math.round((Date.now() - startTime) / 1000);
+        if (readingTime > 30) { // Only track if read for more than 30 seconds
+            $.ajax({
+                url: '/api/track-reading',
+                method: 'POST',
+                data: {
+                    article_id: {{ resource.id }},
+                    time_spent: readingTime
+                },
+                async: false
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+<style>
+.article-content {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #333;
+}
+
+.article-content h1,
+.article-content h2,
+.article-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.article-content p {
+    margin-bottom: 1.2rem;
+}
+
+.article-content ul,
+.article-content ol {
+    margin-bottom: 1.2rem;
+    padding-left: 2rem;
+}
+
+.article-content li {
+    margin-bottom: 0.5rem;
+}
+
+.article-content blockquote {
+    border-left: 4px solid #4CAF50;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    color: #666;
+}
+
+.article-content code {
+    background: #f4f4f4;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.article-content pre {
+    background: #f4f4f4;
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+.article-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem auto;
+}
+</style>
+{% endblock %}

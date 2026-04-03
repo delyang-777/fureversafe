@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Test Form</h2>
+    <form method="POST" action="{{ url_for('report_lost_found') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+            <label>Type</label>
+            <select name="type" class="form-control">
+                <option value="lost">Lost</option>
+                <option value="found">Found</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label>Location</label>
+            <input type="text" name="location" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Date Seen</label>
+            <input type="datetime-local" name="date_seen" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Description</label>
+            <textarea name="description" class="form-control" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+{% endblock %}

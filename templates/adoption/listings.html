@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Adopt a Dog - FurEverSafe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="fas fa-paw"></i> Dogs Available for Adoption</h2>
+            <p class="lead">Find your perfect companion and give them a forever home!</p>
+        </div>
+        {% if current_user.is_authenticated and current_user.user_type == 'shelter' %}
+        <div class="col-auto">
+            <a href="{{ url_for('create_adoption_listing') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Listing
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        {% for listing in listings.items %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                {% if listing.photo %}
+                <img src="{{ url_for('static', filename='uploads/' + listing.photo) }}" 
+                     class="card-img-top" 
+                     alt="{{ listing.dog_name }}" 
+                     style="height: 250px; object-fit: cover;">
+                {% else %}
+                <img src="https://via.placeholder.com/300x250?text=Dog+Photo" 
+                     class="card-img-top" 
+                     alt="No Photo" 
+                     style="height: 250px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ listing.dog_name }}</h5>
+                    <div class="mb-2">
+                        <span class="badge bg-primary">{{ listing.breed }}</span>
+                        <span class="badge bg-secondary">{{ listing.age }} years</span>
+                        <span class="badge bg-info">{{ listing.size|capitalize }}</span>
+                    </div>
+                    <p class="card-text">{{ listing.description[:150] }}{% if listing.description|length > 150 %}...{% endif %}</p>
+                    <a href="{{ url_for('view_adoption_listing', listing_id=listing.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                        View Details <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-footer text-muted">
+                    <small><i class="fas fa-calendar-alt"></i> Listed: {{ listing.created_at.strftime('%Y-%m-%d') }}</small>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle fa-3x mb-3"></i>
+                <h4>No dogs available for adoption at the moment</h4>
+                <p>Please check back later or visit your local shelter!</p>
+                {% if current_user.is_authenticated and current_user.user_type == 'shelter' %}
+                <a href="{{ url_for('create_adoption_listing') }}" class="btn btn-primary mt-2">
+                    Create Your First Listing
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if listings.pages > 1 %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if listings.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('adoption_listings', page=listings.prev_num) }}">&laquo; Previous</a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in listings.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num == listings.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('adoption_listings', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if listings.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('adoption_listings', page=listings.next_num) }}">Next &raquo;</a>
+            </li>
+            {% endif %}
+        </ul>@app.route('/debug-templates')
+def debug_templates():
+    import os
+    template_dir = os.path.join(app.root_path, 'templates')
+    adoption_dir = os.path.join(template_dir, 'adoption')
+    
+    debug_info = {
+        'template_folder': app.template_folder,
+        'root_path': app.root_path,
+        'template_dir_exists': os.path.exists(template_dir),
+        'adoption_dir_exists': os.path.exists(adoption_dir),
+        'files_in_adoption': os.listdir(adoption_dir) if os.path.exists(adoption_dir) else []
+    }
+    return jsonify(debug_info)
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

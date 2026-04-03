@@ -1,0 +1,587 @@
+/* Global Styles - Dog Theme with Images */
+:root {
+    --primary-color: #8142ff;
+    --primary-dark: #ab22e6;
+    --primary-light: #FFB366;
+    --secondary-color: #4A90E2;
+    --success-color: #2ECC71;
+    --danger-color: #E74C3C;
+    --warning-color: #F39C12;
+    --info-color: #3498DB;
+    --dark-color: #2C3E50;
+    --light-color: #ECF0F1;
+    --gray-color: #95A5A6;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* Hero Section with Dog Image */
+.hero-section {
+    position: relative;
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), 
+                url('https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=1600&h=400&fit=crop');
+    background-size: cover;
+    background-position: center 30%;
+    background-attachment: fixed;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    border-radius: 0 0 50px 50px;
+    box-shadow: var(--shadow-lg);
+    color: white;
+}
+
+.hero-section .container {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-section h1, .hero-section .lead {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Card Background with Dog Pattern */
+.card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: none;
+    border-radius: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Dog Profile Image Enhancement */
+.dog-profile-img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 15px;
+    transition: transform 0.3s ease;
+    border: 3px solid white;
+    box-shadow: var(--shadow-md);
+}
+
+.dog-profile-img:hover {
+    transform: scale(1.05);
+}
+
+/* Badge Styles with Dog Emoji */
+.badge {
+    padding: 0.5em 1.2em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 50px;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.badge::before {
+    content: '🐕 ';
+    font-size: 0.8rem;
+}
+
+/* Navigation with Dog Image */
+.navbar {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    position: relative;
+    padding-left: 45px;
+}
+
+.navbar-brand::before {
+    content: '🐕';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.8rem;
+}
+
+/* Dashboard Stats Cards with Dog Images */
+.stats-card {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border-radius: 20px;
+    padding: 25px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.stats-card:nth-child(1) {
+    background: linear-gradient(135deg, #FF8C42, #E67E22), 
+                url('https://cdn.pixabay.com/photo/2016/02/19/15/14/dog-1210559_640.jpg');
+    background-blend-mode: overlay;
+    background-size: cover;
+}
+
+.stats-card:nth-child(2) {
+    background: linear-gradient(135deg, #4A90E2, #357ABD),
+                url('https://cdn.pixabay.com/photo/2015/09/09/20/23/dog-933450_640.jpg');
+    background-blend-mode: overlay;
+    background-size: cover;
+}
+
+.stats-card:nth-child(3) {
+    background: linear-gradient(135deg, #2ECC71, #27AE60),
+                url('https://cdn.pixabay.com/photo/2017/09/25/13/12/dog-2785074_640.jpg');
+    background-blend-mode: overlay;
+    background-size: cover;
+}
+
+.stats-card i {
+    font-size: 3rem;
+    opacity: 0.9;
+    margin-bottom: 15px;
+}
+
+/* Lost & Found Cards with Dog Images */
+.lost-card {
+    background: linear-gradient(135deg, #E74C3C, #C0392B);
+    color: white;
+}
+
+.found-card {
+    background: linear-gradient(135deg, #2ECC71, #27AE60);
+    color: white;
+}
+
+/* Image Gallery for Dogs */
+.dog-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.gallery-item {
+    position: relative;
+    border-radius: 15px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.gallery-item .overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: white;
+    padding: 20px;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.gallery-item:hover .overlay {
+    transform: translateY(0);
+}
+
+.gallery-item:hover img {
+    transform: scale(1.1);
+}
+
+/* Adoption Cards with Dog Images */
+.adoption-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.adoption-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
+    z-index: 1;
+}
+
+.adoption-card img {
+    transition: transform 0.5s ease;
+}
+
+.adoption-card:hover img {
+    transform: scale(1.1);
+}
+
+.adoption-card .card-body {
+    position: relative;
+    z-index: 2;
+    background: rgba(255,255,255,0.9);
+}
+
+/* Form Background with Dog Pattern */
+.form-container {
+    position: relative;
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: var(--shadow-lg);
+}
+
+/* Footer with Dog Silhouette */
+footer {
+    margin-top: auto;
+    background: linear-gradient(135deg, var(--dark-color), #1a252f);
+    position: relative;
+    overflow: hidden;
+}
+
+footer::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background: url('https://cdn.pixabay.com/photo/2013/07/13/12/07/dog-159379_640.png');
+    background-repeat: repeat-x;
+    background-size: contain;
+    opacity: 0.05;
+    pointer-events: none;
+}
+
+/* Dog Avatar for User Profile */
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: url('https://cdn.pixabay.com/photo/2016/12/13/05/15/puppy-1903313_640.jpg');
+    background-size: cover;
+    background-position: center;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+/* Loading Spinner with Animated Dog */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner-overlay .dog-loader {
+    text-align: center;
+    color: white;
+}
+
+.spinner-overlay .dog-loader img {
+    width: 100px;
+    animation: bounce 0.5s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+/* Dog Breed Showcase */
+.breed-showcase {
+    background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+                url('https://images.unsplash.com/photo-1517849845537-4d257902454a?w=1200&h=300&fit=crop');
+    background-size: cover;
+    background-position: center;
+    padding: 60px 0;
+    color: white;
+    text-align: center;
+    border-radius: 20px;
+    margin: 20px 0;
+}
+
+/* Responsive Dog Images */
+@media (max-width: 768px) {
+    .hero-section {
+        background-attachment: scroll;
+        background-position: center;
+    }
+    
+    .stats-card {
+        background-size: cover;
+    }
+    
+    .dog-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .gallery-item img {
+        height: 200px;
+    }
+}
+
+@media (max-width: 576px) {
+    .dog-gallery {
+        grid-template-columns: 1fr;
+    }
+    
+    .hero-section h1 {
+        font-size: 1.8rem;
+    }
+    
+    .hero-section .lead {
+        font-size: 1rem;
+    }
+}
+
+/* Dog Breed Tags */
+.breed-tag {
+    display: inline-block;
+    padding: 5px 15px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    margin: 5px;
+    transition: transform 0.3s ease;
+}
+
+.breed-tag:hover {
+    transform: scale(1.05);
+}
+
+.breed-tag::before {
+    content: '🐕 ';
+}
+
+/* Dog Profile Header */
+.profile-header {
+    position: relative;
+    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+                url('https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1200&h=300&fit=crop');
+    background-size: cover;
+    background-position: center;
+    padding: 60px 0;
+    color: white;
+    border-radius: 20px;
+    margin-bottom: 30px;
+}
+
+.profile-header .dog-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 5px solid white;
+    object-fit: cover;
+    margin-bottom: 20px;
+}
+
+/* Vaccination Card with Dog Icon */
+.vaccine-card {
+    background: white;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    position: relative;
+    padding-left: 60px;
+}
+
+.vaccine-card::before {
+    content: '💉';
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 30px;
+}
+
+.vaccine-card:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Appointment Card */
+.appointment-card {
+    background: white;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    position: relative;
+    padding-left: 60px;
+}
+
+.appointment-card::before {
+    content: '📅';
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 30px;
+}
+
+/* Health Record Card */
+.health-card {
+    background: white;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    position: relative;
+    padding-left: 60px;
+}
+
+.health-card::before {
+    content: '🏥';
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 30px;
+}
+
+/* Button with Dog Icon */
+.btn-dog {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-dog:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    color: white;
+}
+
+.btn-dog::before {
+    content: '🐕 ';
+}
+
+/* Empty State with Dog Illustration */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.empty-state img {
+    width: 200px;
+    margin-bottom: 20px;
+    opacity: 0.6;
+}
+
+.empty-state h4 {
+    color: var(--gray-color);
+    margin-bottom: 10px;
+}
+
+/* Success Animation */
+@keyframes woof {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.success-animation {
+    animation: woof 0.5s ease-in-out;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+/* Smooth Scroll */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Custom Selection Color */
+::selection {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Dog Paw Print Animation on Hover */
+.paw-hover:hover {
+    position: relative;
+    overflow: hidden;
+}
+
+.paw-hover:hover::after {
+    content: '🐾';
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    font-size: 20px;
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

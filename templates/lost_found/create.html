@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Report Lost/Found - FurEverSafe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Report Lost or Found Dog</h4>
+                </div>
+                <div class="card-body">
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <strong>Errors:</strong>
+                        <ul>
+                            {% for field, errors in form.errors.items() %}
+                                {% for error in errors %}
+                                    <li>{{ field }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.csrf_token }}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Report Type *</label>
+                            <select name="type" class="form-control" required>
+                                <option value="lost">Lost Dog</option>
+                                <option value="found">Found Dog</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Location *</label>
+                            <input type="text" name="location" class="form-control" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Date Seen *</label>
+                            <input type="datetime-local" name="date_seen" class="form-control" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Description *</label>
+                            <textarea name="description" class="form-control" rows="4" required></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Dog Name (optional)</label>
+                            <input type="text" name="dog_name" class="form-control">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Breed (optional)</label>
+                            <input type="text" name="breed" class="form-control">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Color (optional)</label>
+                            <input type="text" name="color" class="form-control">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Contact Info (optional)</label>
+                            <input type="text" name="contact_info" class="form-control">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Photo (optional)</label>
+                            <input type="file" name="photo" class="form-control">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-danger">Submit Report</button>
+                        <a href="{{ url_for('lost_found_reports') }}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set default date
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.querySelector('input[type="datetime-local"]').value = now.toISOString().slice(0, 16);
+</script>
+{% endblock %}

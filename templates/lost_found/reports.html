@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Lost & Found - FurEverSafe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="fas fa-search"></i> Lost and Found Dogs</h2>
+            <p class="lead">Help reunite lost dogs with their families</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('report_lost_found') }}" class="btn btn-danger">
+                <i class="fas fa-plus"></i> Report Lost/Found Dog
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="btn-group">
+                <a href="{{ url_for('lost_found_reports', type='all') }}" 
+                   class="btn btn-outline-primary {% if type_filter == 'all' %}active{% endif %}">
+                    All Reports
+                </a>
+                <a href="{{ url_for('lost_found_reports', type='lost') }}" 
+                   class="btn btn-outline-danger {% if type_filter == 'lost' %}active{% endif %}">
+                    Lost Dogs
+                </a>
+                <a href="{{ url_for('lost_found_reports', type='found') }}" 
+                   class="btn btn-outline-success {% if type_filter == 'found' %}active{% endif %}">
+                    Found Dogs
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports List -->
+    <div class="row">
+        {% if reports.items %}
+            {% for report in reports.items %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header {% if report.type == 'lost' %}bg-danger{% else %}bg-success{% endif %} text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-{% if report.type == 'lost' %}search{% else %}flag-checkered{% endif %}"></i>
+                                {{ 'Lost Dog' if report.type == 'lost' else 'Found Dog' }}
+                            </h5>
+                            <small>{{ report.date_seen.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                {% if report.photo %}
+                                <img src="{{ url_for('static', filename='uploads/' + report.photo) }}" 
+                                     class="img-fluid rounded" alt="Dog">
+                                {% else %}
+                                <div class="bg-light text-center p-3 rounded">
+                                    <i class="fas fa-dog fa-3x text-muted"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-8">
+                                <h4>{{ report.dog_name or 'Unknown Name' }}</h4>
+                                <p class="mb-1">
+                                    <strong>Breed:</strong> {{ report.breed or 'Unknown' }}<br>
+                                    <strong>Color:</strong> {{ report.color or 'Unknown' }}<br>
+                                    <strong>Location:</strong> <i class="fas fa-map-marker-alt"></i> {{ report.location }}
+                                </p>
+                                <p class="mt-2">{{ report.description[:150] }}{% if report.description|length > 150 %}...{% endif %}</p>
+                                <a href="{{ url_for('view_report', report_id=report.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    View Details <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>Reported by: {{ report.reporter.username }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle fa-3x mb-3"></i>
+                    <h4>No Reports Found</h4>
+                    <p>There are currently no lost or found dog reports.</p>
+                    <a href="{{ url_for('report_lost_found') }}" class="btn btn-primary">
+                        Report a Lost or Found Dog
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if reports.pages > 1 %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if reports.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('lost_found_reports', page=reports.prev_num, type=type_filter) }}">
+                    &laquo; Previous
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in reports.iter_pages() %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == reports.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('lost_found_reports', page=page_num, type=type_filter) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if reports.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('lost_found_reports', page=reports.next_num, type=type_filter) }}">
+                    Next &raquo;
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

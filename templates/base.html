@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FurEverSafe - Responsible Dog Ownership{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Notification badge animation */
+        @keyframes bellRing {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(15deg); }
+            50% { transform: rotate(-15deg); }
+            75% { transform: rotate(10deg); }
+            100% { transform: rotate(0deg); }
+        }
+        
+        .notification-bell-ring {
+            animation: bellRing 0.5s ease-in-out;
+        }
+        
+        .notification-dropdown {
+            width: 380px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .notification-item {
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .notification-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .notification-item.unread {
+            background-color: #fff3e0;
+        }
+        
+        .notification-item.unread:hover {
+            background-color: #ffe8cc;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: bold;
+            min-width: 18px;
+            text-align: center;
+        }
+        
+        .mark-read-btn {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .notification-item:hover .mark-read-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-paw"></i> FurEverSafe
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('adoption_listings') }}">Adopt</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('lost_found_reports') }}">Lost & Found</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('education_resources') }}">Education</a>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                    <!-- Notification Bell -->
+                    <li class="nav-item dropdown me-2">
+                        <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" id="notificationBell">
+                            <i class="fas fa-bell"></i>
+                            <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end notification-dropdown" id="notificationDropdown">
+                            <div class="dropdown-header d-flex justify-content-between align-items-center">
+                                <strong>Notifications</strong>
+                                <button class="btn btn-sm btn-link" onclick="markAllNotificationsRead()">Mark all read</button>
+                            </div>
+                            <div id="notificationList">
+                                <div class="dropdown-item text-center text-muted">Loading...</div>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-center" href="{{ url_for('notifications_page') }}">
+                                View all notifications
+                            </a>
+                        </div>
+                    </li>
+                    
+                    <!-- User Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                            {% if current_user.user_type == 'owner' %}
+                            <li><a class="dropdown-item" href="{{ url_for('create_dog') }}">Add New Dog</a></li>
+                            {% endif %}
+                            {% if current_user.user_type == 'shelter' %}
+                            <li><a class="dropdown-item" href="{{ url_for('create_adoption_listing') }}">Create Adoption Listing</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('approval_dashboard') }}">Approval Dashboard</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('notifications_page') }}">Notifications</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show m-3" role="alert">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-dark text-light mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5><i class="fas fa-paw"></i> FurEverSafe</h5>
+                    <p>Your trusted partner in responsible dog ownership and animal welfare.</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('adoption_listings') }}" class="text-light">Adopt a Dog</a></li>
+                        <li><a href="{{ url_for('lost_found_reports') }}" class="text-light">Lost & Found</a></li>
+                        <li><a href="{{ url_for('education_resources') }}" class="text-light">Educational Resources</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Contact</h5>
+                    <p><i class="fas fa-envelope"></i> fureversafe@gmail.com</p>
+                    <p><i class="fas fa-phone"></i> 09709582873</p>
+                </div>
+            </div>
+            <hr>
+            <div class="text-center">
+                <p>&copy; 2026 FurEverSafe. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <!-- Notification System JavaScript -->
+    <script>
+        // Global variables
+        let lastNotificationCount = 0;
+        let notificationInterval;
+        
+        // Get CSRF token from meta tag (add this to your head if needed)
+        function getCSRFToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        }
+        
+        // Load notifications for dropdown
+        function loadNotifications() {
+            $.ajax({
+                url: '/api/notifications',
+                method: 'GET',
+                data: { page: 1, per_page: 10 },
+                success: function(data) {
+                    displayNotifications(data.notifications);
+                    updateNotificationBadge(data.total);
+                    
+                    // Animate bell if new notifications
+                    if (data.total > lastNotificationCount) {
+                        animateBell();
+                    }
+                    lastNotificationCount = data.total;
+                },
+                error: function(xhr) {
+                    console.error('Error loading notifications:', xhr);
+                }
+            });
+        }
+        
+        // Display notifications in dropdown
+        function displayNotifications(notifications) {
+            const container = $('#notificationList');
+            container.empty();
+            
+            if (!notifications || notifications.length === 0) {
+                container.html('<div class="dropdown-item text-center text-muted">No new notifications</div>');
+                return;
+            }
+            
+            notifications.forEach(notification => {
+                const icon = getNotificationIcon(notification.type);
+                const iconColor = getNotificationColor(notification.type);
+                const timeAgoText = timeAgo(notification.created_at);
+                
+                const notificationHtml = `
+                    <div class="notification-item ${!notification.is_read ? 'unread' : ''}" data-id="${notification.id}">
+                        <div class="d-flex p-3">
+                            <div class="flex-shrink-0">
+                                <i class="${icon} fs-5" style="color: ${iconColor}"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <strong class="small">${escapeHtml(notification.title)}</strong>
+                                    <small class="text-muted">${timeAgoText}</small>
+                                </div>
+                                <div class="small text-muted mt-1">${escapeHtml(notification.message)}</div>
+                            </div>
+                            ${!notification.is_read ? `
+                            <button class="btn btn-sm btn-link text-muted mark-read-btn" onclick="markNotificationRead(${notification.id}, event)">
+                                <i class="fas fa-check-circle"></i>
+                            </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                container.append(notificationHtml);
+            });
+        }
+        
+        // Get icon for notification type
+        function getNotificationIcon(type) {
+            const icons = {
+                'approval': 'fas fa-user-check',
+                'adoption': 'fas fa-heart',
+                'lost_found': 'fas fa-search',
+                'appointment': 'fas fa-calendar-check',
+                'system': 'fas fa-bell'
+            };
+            return icons[type] || 'fas fa-bell';
+        }
+        
+        // Get color for notification type
+        function getNotificationColor(type) {
+            const colors = {
+                'approval': '#28a745',
+                'adoption': '#e83e8c',
+                'lost_found': '#fd7e14',
+                'appointment': '#17a2b8',
+                'system': '#6c757d'
+            };
+            return colors[type] || '#007bff';
+        }
+        
+        // Update notification badge
+        function updateNotificationBadge(count) {
+            const badge = $('#notificationBadge');
+            if (count > 0) {
+                badge.text(count > 99 ? '99+' : count);
+                badge.show();
+            } else {
+                badge.hide();
+            }
+        }
+        
+        // Animate bell icon
+        function animateBell() {
+            const bell = $('#notificationBell i');
+            bell.addClass('notification-bell-ring');
+            setTimeout(() => {
+                bell.removeClass('notification-bell-ring');
+            }, 500);
+        }
+        
+        // Mark single notification as read
+        function markNotificationRead(notificationId, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            
+            $.ajax({
+                url: '/api/notifications/mark-read',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ notification_ids: [notificationId] }),
+                success: function() {
+                    // Reload notifications
+                    loadNotifications();
+                }
+            });
+        }
+        
+        // Mark all notifications as read
+        function markAllNotificationsRead() {
+            $.ajax({
+                url: '/api/notifications/mark-read',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ notification_ids: [] }),
+                success: function() {
+                    loadNotifications();
+                }
+            });
+        }
+        
+        // Get unread count
+        function updateUnreadCount() {
+            $.ajax({
+                url: '/api/notifications/count',
+                method: 'GET',
+                success: function(data) {
+                    updateNotificationBadge(data.count);
+                }
+            });
+        }
+        
+        // Time ago function
+        function timeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            const days = Math.floor(hours / 24);
+            if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+            return date.toLocaleDateString();
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Load notifications when dropdown opens
+        $(document).ready(function() {
+            // Only initialize if user is logged in
+            {% if current_user.is_authenticated %}
+            // Initial load
+            loadNotifications();
+            updateUnreadCount();
+            
+            // Set interval to check for new notifications every 30 seconds
+            notificationInterval = setInterval(function() {
+                updateUnreadCount();
+                // If dropdown is open, reload notifications
+                if ($('#notificationDropdown').hasClass('show')) {
+                    loadNotifications();
+                }
+            }, 30000);
+            
+            // Reload notifications when dropdown opens
+            $('#notificationBell').on('shown.bs.dropdown', function() {
+                loadNotifications();
+            });
+            {% endif %}
+        });
+        
+        // Clear interval on page unload (optional)
+        window.addEventListener('beforeunload', function() {
+            if (notificationInterval) {
+                clearInterval(notificationInterval);
+            }
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}FurEverSafe - Home{% endblock %}
+
+{% block content %}
+<div class="hero-section bg-primary text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-4">Welcome to FurEverSafe</h1>
+        <p class="lead">Your comprehensive platform for responsible dog ownership and animal welfare</p>
+        <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">Get Started</a>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="fas fa-dog fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Dog Health Management</h5>
+                    <p class="card-text">Track vaccinations, appointments, and health records for your furry friends.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="fas fa-heart fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Adoption Services</h5>
+                    <p class="card-text">Find your perfect companion or help dogs find their forever homes.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="fas fa-graduation-cap fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Educational Resources</h5>
+                    <p class="card-text">Learn about proper dog care, training, and animal welfare.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="text-center mb-4">Available for Adoption</h2>
+    <div class="row">
+        {% for listing in recent_listings %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                {% if listing.photo %}
+                <img src="{{ url_for('static', filename='uploads/' + listing.photo) }}" class="card-img-top" alt="{{ listing.dog_name }}" style="height: 200px; object-fit: cover;">
+                {% else %}
+                <img src="https://via.placeholder.com/300x200?text=Dog+Photo" class="card-img-top" alt="Dog">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ listing.dog_name }}</h5>
+                    <p class="card-text">{{ listing.breed }} • {{ listing.age }} years</p>
+                    <a href="{{ url_for('view_adoption_listing', listing_id=listing.id) }}" class="btn btn-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="text-center mb-4 mt-5">Educational Resources</h2>
+    <div class="row">
+        {% for resource in recent_resources %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ resource.title }}</h5>
+                    <p class="card-text">{{ resource.content[:150] }}...</p>
+                    <a href="{{ url_for('view_article', resource_id=resource.id) }}" class="btn btn-outline-primary">Read More</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="alert alert-info mt-5">
+        <h4 class="alert-heading">Recent Lost & Found Reports</h4>
+        <div class="row">
+            {% for report in recent_lost_found %}
+            <div class="col-md-4 mb-2">
+                <div class="d-flex">
+                    <i class="fas fa-{{ 'search' if report.type == 'lost' else 'flag' }} me-2 mt-1"></i>
+                    <div>
+                        <strong>{{ 'Lost' if report.type == 'lost' else 'Found' }} Dog</strong><br>
+                        {{ report.location }} - {{ report.date_seen.strftime('%Y-%m-%d') }}
+                        <a href="{{ url_for('view_report', report_id=report.id) }}" class="small">View</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
