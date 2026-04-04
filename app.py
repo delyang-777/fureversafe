@@ -2,13 +2,20 @@ from flask import Flask, render_template, redirect, url_for, flash, request, abo
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+from wtforms import form
 from config import Config
 from models import ApprovalRequest, db, User, Dog, HealthRecord, Vaccination, Appointment, AdoptionListing, AdoptionApplication, LostFound, EducationalResource, Notification
 from forms import *
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
+from flask_ckeditor import CKEditor
+import markdown
+from markdown.extensions.extra import ExtraExtension
+from markdown.extensions.codehilite import CodeHiliteExtension
+from werkzeug.utils import secure_filename
+from flask import request, current_app
 
 # Fix: Specify the template folder explicitly with absolute path
 template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -17,6 +24,17 @@ static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 app = Flask(__name__, 
            template_folder=template_dir,
            static_folder=static_dir)
+
+app.config.from_object(Config)
+app.config['MAX_CONTENT_LENGTH'] = 700 * 1024 * 1024  # 700MB max file size
+
+ckeditor = CKEditor(app)
+
+# CKEditor configuration
+app.config['CKEDITOR_SERVE_LOCAL'] = True
+app.config['CKEDITOR_HEIGHT'] = 400
+app.config['CKEDITOR_WIDTH'] = '100%'
+app.config['CKEDITOR_ENABLE_CODESNIPPET'] = True
 
 app.config.from_object(Config)
 
@@ -49,6 +67,18 @@ def send_approval_notification_to_shelters(user):
         {url_for('approval_dashboard', _external=True)}
         """
         mail.send(msg)
+        
+def save_media_file(file):
+    """Save uploaded image or video file"""
+    if file and file.filename:
+        filename = secure_filename(file.filename)
+        name, ext = os.path.splitext(filename)
+        filename = f"media_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        return filename
+    return None
+
 
 # Add this after creating app
 migrate = Migrate(app, db)
@@ -77,7 +107,8 @@ os.makedirs(os.path.join(app.template_folder, 'shelter'), exist_ok=True)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    # Use db.session.get() instead of Query.get() (SQLAlchemy 2.0 compatible)
+    return db.session.get(User, int(user_id))
 
 # Helper function to save uploaded file
 def save_file(file):
@@ -916,60 +947,120 @@ def create_educational_resource():
         return redirect(url_for('education_resources'))
     
     form = EducationalResourceForm()
+    
     if form.validate_on_submit():
-        thumbnail_filename = save_file(form.thumbnail.data)
-        
-        resource = EducationalResource(
-            title=form.title.data,
-            category=form.category.data,
-            content=form.content.data,
-            author=form.author.data or current_user.username,
-            thumbnail=thumbnail_filename
-        )
-        
-        db.session.add(resource)
-        db.session.commit()
-        
-        # Notify all users about new educational resource
-        notify_all_users(
-            title='New Educational Resource Available',
-            message=f'A new article "{form.title.data}" has been published.',
-            type='system',
-            reference_id=resource.id
-        )
-        
-        flash('Educational resource created successfully!', 'success')
-        return redirect(url_for('education_resources'))
+        try:
+            # Handle file upload
+            media_filename = None
+            if form.media_file.data and form.media_file.data.filename:
+                media_filename = save_media_file(form.media_file.data)
+            
+            # Store as plain text - NO HTML, NO MARKDOWN
+            resource = EducationalResource(
+                title=form.title.data,
+                category=form.category.data,
+                content=form.content.data,  # Plain text only
+                author=form.author.data or current_user.username,
+                thumbnail=media_filename
+            )
+            
+            db.session.add(resource)
+            db.session.commit()
+            
+            # Notify all users
+            notify_all_users(
+                title='New Educational Resource Available',
+                message=f'A new article "{form.title.data}" has been published.',
+                type='system',
+                reference_id=resource.id
+            )
+            
+            flash('Educational resource created successfully!', 'success')
+            return redirect(url_for('education_resources'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error: {e}")
+            flash(f'Error creating resource: {str(e)}', 'danger')
+    else:
+        if request.method == 'POST':
+            print("Form validation failed!")
+            print(form.errors)
+            flash('Please correct the errors below.', 'danger')
     
     return render_template('education/create.html', form=form)
 
-# Notification API endpoints
+
+@app.route('/notifications')
+@login_required
+def notifications():
+    """Display all notifications page"""
+    return render_template('notifications.html')
+
+
+# Optimized Notification API endpoints
 @app.route('/api/notifications')
 @login_required
 def get_notifications():
-    """Get unread notifications for current user"""
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    
+    """Get unread notifications - optimized for speed"""
+    # Limit to 10 most recent unread notifications
     notifications = Notification.query.filter_by(
         user_id=current_user.id,
         is_read=False
-    ).order_by(Notification.created_at.desc()).paginate(page=page, per_page=per_page)
+    ).order_by(Notification.created_at.desc()).limit(10).all()
+    
+    return jsonify({
+        'notifications': [n.to_dict() for n in notifications],
+        'total': len(notifications)
+    })
+
+@app.route('/api/notifications/all')
+@login_required
+def get_all_notifications():
+    """Get all notifications with efficient pagination"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # Load only 10 at a time
+    
+    # Only get last 30 days of notifications
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    
+    notifications = Notification.query.filter_by(
+        user_id=current_user.id
+    ).filter(
+        Notification.created_at >= thirty_days_ago
+    ).order_by(Notification.created_at.desc()).paginate(
+        page=page, 
+        per_page=per_page, 
+        error_out=False
+    )
     
     return jsonify({
         'notifications': [n.to_dict() for n in notifications.items],
         'total': notifications.total,
         'pages': notifications.pages,
-        'current_page': notifications.page
+        'current_page': notifications.page,
+        'has_next': notifications.has_next
     })
+
+@app.route('/api/notifications/count')
+@login_required
+def get_unread_count():
+    """Get unread count - fast COUNT query"""
+    count = Notification.query.filter_by(
+        user_id=current_user.id,
+        is_read=False
+    ).count()
+    return jsonify({'count': count})
 
 @app.route('/api/notifications/mark-read', methods=['POST'])
 @login_required
 def mark_notifications_read():
     """Mark notifications as read"""
-    notification_ids = request.json.get('notification_ids', [])
+    data = request.get_json()
+    notification_ids = data.get('notification_ids', [])
     
     if notification_ids:
+        # Mark specific notifications as read
         Notification.query.filter(
             Notification.id.in_(notification_ids),
             Notification.user_id == current_user.id
@@ -983,21 +1074,6 @@ def mark_notifications_read():
     
     db.session.commit()
     return jsonify({'success': True})
-
-@app.route('/api/notifications/count')
-@login_required
-def get_unread_count():
-    """Get unread notification count"""
-    count = Notification.query.filter_by(
-        user_id=current_user.id,
-        is_read=False
-    ).count()
-    return jsonify({'count': count})
-
-@app.route('/notifications')
-@login_required
-def notifications_page():
-    return render_template('notifications.html')
 
 # API endpoints for AJAX calls
 @app.route('/api/search')

@@ -11,67 +11,64 @@
                     <h4 class="mb-0"><i class="fas fa-plus-circle"></i> Create Educational Resource</h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST" enctype="multipart/form-data" id="resourceForm">
                         {{ form.hidden_tag() }}
                         
                         <div class="mb-3">
                             {{ form.title.label(class="form-label") }}
-                            {{ form.title(class="form-control", placeholder="Enter a descriptive title") }}
+                            {{ form.title(class="form-control") }}
                             {% for error in form.title.errors %}
                                 <div class="text-danger">{{ error }}</div>
                             {% endfor %}
-                            <div class="form-text">Choose a clear, engaging title that reflects the content</div>
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.category.label(class="form-label") }}
-                            {{ form.category(class="form-select") }}
-                            {% for error in form.category.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.author.label(class="form-label") }}
-                            {{ form.author(class="form-control", placeholder="Your name or organization") }}
-                            {% for error in form.author.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                            <div class="form-text">Leave blank to use your username</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.content.label(class="form-label") }}
-                            {{ form.content(class="form-control", rows="15", placeholder="Write your article content here. You can use HTML for formatting...") }}
-                            {% for error in form.content.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                            <div class="form-text">
-                                <i class="fas fa-info-circle"></i> 
-                                You can use HTML tags for formatting: &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;h2&gt;, etc.
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.category.label(class="form-label") }}
+                                {{ form.category(class="form-select") }}
+                                {% for error in form.category.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                {{ form.author.label(class="form-label") }}
+                                {{ form.author(class="form-control") }}
+                                {% for error in form.author.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
                             </div>
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.thumbnail.label(class="form-label") }}
-                            {{ form.thumbnail(class="form-control", accept="image/*") }}
-                            {% for error in form.thumbnail.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                            <div class="form-text">Upload a thumbnail image (recommended size: 300x200 pixels)</div>
+                        <!-- Media Upload Section -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-upload"></i> Upload Image or Video (Optional)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    {{ form.media_file.label(class="form-label") }}
+                                    {{ form.media_file(class="form-control", accept="image/*,video/*") }}
+                                    <div class="form-text">Supported: Images (JPG, PNG, GIF) | Videos (MP4, WebM) - Max 500MB</div>
+                                    {% for error in form.media_file.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div id="mediaPreview" style="display: none; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+                                    <strong>Preview:</strong><br>
+                                    <div id="mediaPreviewContent"></div>
+                                </div>
+                            </div>
                         </div>
                         
-                        <div id="thumbnail-preview" class="mb-3"></div>
-                        
-                        <div class="alert alert-info">
-                            <h6><i class="fas fa-tips"></i> Writing Tips:</h6>
-                            <ul class="mb-0">
-                                <li>Use clear headings to organize your content</li>
-                                <li>Include practical examples and actionable advice</li>
-                                <li>Add images to make the content more engaging</li>
-                                <li>Cite sources when referencing research or statistics</li>
-                                <li>Keep paragraphs short and easy to read</li>
-                            </ul>
+                        <!-- Content Editor - Plain Text Only, No Toolbar -->
+                        <div class="mb-3">
+                            {{ form.content.label(class="form-label") }}
+                            {{ form.content(class="form-control", rows=15, placeholder="Write your content here...") }}
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle"></i> 
+                                Write your content as plain text. What you type is what readers will see.
+                            </div>
                         </div>
                         
                         <div class="d-grid gap-2">
@@ -87,160 +84,43 @@
     </div>
 </div>
 
-<!-- WYSIWYG Editor Help -->
-<div class="modal fade" id="editorHelpModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">Formatting Help</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <h6>HTML Tags You Can Use:</h6>
-                <ul>
-                    <li><code>&lt;h1&gt;Title&lt;/h1&gt;</code> - Main heading</li>
-                    <li><code>&lt;h2&gt;Subheading&lt;/h2&gt;</code> - Section heading</li>
-                    <li><code>&lt;h3&gt;Sub-subheading&lt;/h3&gt;</code> - Subsection heading</li>
-                    <li><code>&lt;p&gt;Paragraph text&lt;/p&gt;</code> - Paragraph</li>
-                    <li><code>&lt;strong&gt;Bold text&lt;/strong&gt;</code> - Bold</li>
-                    <li><code>&lt;em&gt;Italic text&lt;/em&gt;</code> - Italic</li>
-                    <li><code>&lt;ul&gt;&lt;li&gt;List item&lt;/li&gt;&lt;/ul&gt;</code> - Bullet list</li>
-                    <li><code>&lt;ol&gt;&lt;li&gt;List item&lt;/li&gt;&lt;/ol&gt;</code> - Numbered list</li>
-                    <li><code>&lt;img src="image_url" alt="description"&gt;</code> - Add image</li>
-                    <li><code>&lt;a href="url"&gt;Link text&lt;/a&gt;</code> - Add link</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% block scripts %}
 <script>
-    // Preview thumbnail before upload
-    document.querySelector('input[type="file"]').addEventListener('change', function(e) {
-        const previewDiv = document.getElementById('thumbnail-preview');
-        if (e.target.files && e.target.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewDiv.innerHTML = `
-                    <div class="alert alert-success">
-                        <strong>Thumbnail Preview:</strong><br>
-                        <img src="${e.target.result}" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 10px; margin-top: 10px;">
-                    </div>
-                `;
-            };
-            reader.readAsDataURL(e.target.files[0]);
-        } else {
-            previewDiv.innerHTML = '';
-        }
-    });
-    
-    // Word counter for content
-    const contentField = document.querySelector('textarea[name="content"]');
-    if (contentField) {
-        const counterDiv = document.createElement('div');
-        counterDiv.className = 'form-text text-muted mt-1';
-        counterDiv.id = 'word-counter';
-        contentField.parentNode.appendChild(counterDiv);
-        
-        function updateWordCount() {
-            const text = contentField.value;
-            const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
-            counterDiv.innerHTML = `${wordCount} words (recommended: 300-3000 words)`;
+    // Preview uploaded media
+    const mediaFileInput = document.getElementById('media_file');
+    if (mediaFileInput) {
+        mediaFileInput.addEventListener('change', function(e) {
+            const previewDiv = document.getElementById('mediaPreview');
+            const previewContent = document.getElementById('mediaPreviewContent');
             
-            if (wordCount < 300) {
-                counterDiv.style.color = '#ff9800';
-                counterDiv.innerHTML += ' - Consider adding more detail';
-            } else if (wordCount > 3000) {
-                counterDiv.style.color = '#f44336';
-                counterDiv.innerHTML += ' - Consider breaking into multiple articles';
-            } else {
-                counterDiv.style.color = '#4caf50';
-                counterDiv.innerHTML += ' - Good length!';
-            }
-        }
-        
-        contentField.addEventListener('input', updateWordCount);
-        updateWordCount();
-    }
-    
-    // Add formatting buttons (simple toolbar)
-    function addFormattingToolbar() {
-        const toolbar = document.createElement('div');
-        toolbar.className = 'btn-group mb-2 flex-wrap';
-        toolbar.setAttribute('role', 'group');
-        
-        const buttons = [
-            { icon: 'fas fa-bold', tag: 'strong', label: 'Bold' },
-            { icon: 'fas fa-italic', tag: 'em', label: 'Italic' },
-            { icon: 'fas fa-list-ul', tag: 'ul', label: 'Bullet List' },
-            { icon: 'fas fa-list-ol', tag: 'ol', label: 'Numbered List' },
-            { icon: 'fas fa-heading', tag: 'h2', label: 'Heading' },
-            { icon: 'fas fa-link', tag: 'link', label: 'Link' }
-        ];
-        
-        buttons.forEach(btn => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'btn btn-sm btn-outline-secondary';
-            button.innerHTML = `<i class="${btn.icon}"></i>`;
-            button.title = btn.label;
-            button.onclick = () => insertFormatting(btn.tag);
-            toolbar.appendChild(button);
-        });
-        
-        const helpButton = document.createElement('button');
-        helpButton.type = 'button';
-        helpButton.className = 'btn btn-sm btn-outline-info ms-2';
-        helpButton.innerHTML = '<i class="fas fa-question-circle"></i>';
-        helpButton.title = 'Formatting Help';
-        helpButton.onclick = () => $('#editorHelpModal').modal('show');
-        toolbar.appendChild(helpButton);
-        
-        contentField.parentNode.insertBefore(toolbar, contentField);
-    }
-    
-    function insertFormatting(tag) {
-        const textarea = contentField;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selectedText = textarea.value.substring(start, end);
-        let wrappedText = '';
-        
-        switch(tag) {
-            case 'strong':
-                wrappedText = `<strong>${selectedText || 'bold text'}</strong>`;
-                break;
-            case 'em':
-                wrappedText = `<em>${selectedText || 'italic text'}</em>`;
-                break;
-            case 'ul':
-                wrappedText = `\n<ul>\n  <li>${selectedText || 'list item'}</li>\n</ul>\n`;
-                break;
-            case 'ol':
-                wrappedText = `\n<ol>\n  <li>${selectedText || 'list item'}</li>\n</ol>\n`;
-                break;
-            case 'h2':
-                wrappedText = `\n<h2>${selectedText || 'Heading'}</h2>\n`;
-                break;
-            case 'link':
-                const url = prompt('Enter URL:', 'https://');
-                if (url) {
-                    wrappedText = `<a href="${url}" target="_blank">${selectedText || 'link text'}</a>`;
+            if (e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+                const fileType = file.type;
+                const maxSize = 500 * 1024 * 1024;
+                
+                if (file.size > maxSize) {
+                    alert(`File too large! Maximum size is 500MB.`);
+                    this.value = '';
+                    previewDiv.style.display = 'none';
+                    previewContent.innerHTML = '';
+                    return;
                 }
-                break;
-        }
-        
-        if (wrappedText) {
-            textarea.value = textarea.value.substring(0, start) + wrappedText + textarea.value.substring(end);
-            textarea.focus();
-        }
+                
+                const fileURL = URL.createObjectURL(file);
+                previewDiv.style.display = 'block';
+                
+                if (fileType.startsWith('image/')) {
+                    previewContent.innerHTML = `<img src="${fileURL}" alt="Preview" style="max-width: 100%; max-height: 250px; border-radius: 8px;">`;
+                } else if (fileType.startsWith('video/')) {
+                    previewContent.innerHTML = `<video controls style="max-width: 100%; max-height: 250px; border-radius: 8px;">
+                                                    <source src="${fileURL}" type="${fileType}">
+                                                    Your browser does not support the video tag.
+                                                </video>`;
+                }
+            } else {
+                previewDiv.style.display = 'none';
+                previewContent.innerHTML = '';
+            }
+        });
     }
-    
-    // Initialize toolbar on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        addFormattingToolbar();
-    });
 </script>
-{% endblock %}
 {% endblock %}

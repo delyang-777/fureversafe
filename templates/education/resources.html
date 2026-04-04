@@ -6,8 +6,8 @@
 <div class="container mt-4">
     <div class="row mb-4">
         <div class="col">
-            <h2>Educational Resources</h2>
-            <p>Learn about responsible dog ownership, training, health, and animal welfare.</p>
+            <h2><i class="fas fa-graduation-cap"></i> Educational Resources</h2>
+            <p class="lead">Learn about responsible dog ownership, training, health, and animal welfare.</p>
         </div>
         {% if current_user.is_authenticated and current_user.user_type in ['shelter', 'vet'] %}
         <div class="col-auto">
@@ -33,7 +33,7 @@
     <div class="row">
         {% for resource in resources.items %}
         <div class="col-md-4 mb-4">
-            <div class="card h-100">
+            <div class="card h-100 shadow-sm">
                 {% if resource.thumbnail %}
                 <img src="{{ url_for('static', filename='uploads/' + resource.thumbnail) }}" class="card-img-top" alt="{{ resource.title }}" style="height: 200px; object-fit: cover;">
                 {% else %}
@@ -44,8 +44,10 @@
                         <span class="badge bg-primary">{{ resource.category|capitalize }}</span>
                     </div>
                     <h5 class="card-title">{{ resource.title }}</h5>
-                    <p class="card-text">{{ resource.content[:120] }}...</p>
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="card-text">
+                        {{ resource.content|striptags|truncate(120) }}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
                         <small class="text-muted">By {{ resource.author or 'FurEverSafe' }}</small>
                         <small class="text-muted"><i class="fas fa-eye"></i> {{ resource.views }} views</small>
                     </div>
@@ -74,15 +76,9 @@
             
             {% for page_num in resources.iter_pages() %}
                 {% if page_num %}
-                    {% if page_num == resources.page %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ page_num }}</span>
-                    </li>
-                    {% else %}
-                    <li class="page-item">
+                    <li class="page-item {% if page_num == resources.page %}active{% endif %}">
                         <a class="page-link" href="{{ url_for('education_resources', page=page_num, category=category) }}">{{ page_num }}</a>
                     </li>
-                    {% endif %}
                 {% else %}
                     <li class="page-item disabled"><span class="page-link">...</span></li>
                 {% endif %}

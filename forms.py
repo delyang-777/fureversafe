@@ -3,6 +3,7 @@ from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, TextAreaField, IntegerField, FloatField, SelectField, DateTimeField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, ValidationError, Optional
 from datetime import datetime
+from flask_ckeditor import CKEditorField
 
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=3, max=80)])
@@ -82,8 +83,15 @@ class LostFoundForm(FlaskForm):
 
 class EducationalResourceForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
-    category = SelectField('Category', choices=[('training', 'Training'), ('health', 'Health'), ('nutrition', 'Nutrition'), ('welfare', 'Animal Welfare')])
+    category = SelectField('Category', choices=[
+        ('training', 'Training'), 
+        ('health', 'Health'), 
+        ('nutrition', 'Nutrition'), 
+        ('welfare', 'Animal Welfare')
+    ], validators=[DataRequired()])
     content = TextAreaField('Content', validators=[DataRequired()])
     author = StringField('Author')
-    thumbnail = FileField('Thumbnail', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'gif'])])
+    media_file = FileField('Upload Image or Video', validators=[
+        FileAllowed(['jpg', 'png', 'jpeg', 'gif', 'mp4', 'webm', 'ogg'], 'Images and videos only!')
+    ])
     submit = SubmitField('Publish Resource')

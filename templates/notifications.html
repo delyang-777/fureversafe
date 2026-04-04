@@ -8,16 +8,22 @@
         <div class="col-md-8 mx-auto">
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0"><i class="fas fa-bell"></i> Notifications</h4>
+                    <h4 class="mb-0"><i class="fas fa-bell"></i> All Notifications</h4>
                     <button class="btn btn-sm btn-light" onclick="markAllRead()">
-                        <i class="fas fa-check-double"></i> Mark all as read
+                        <i class="fas fa-check-double"></i> Mark all read
                     </button>
                 </div>
                 <div class="card-body p-0">
-                    <div id="allNotificationsList">
+                    <div id="notificationsList">
                         <div class="text-center p-5">
                             <div class="spinner-border text-primary"></div>
+                            <p class="mt-2">Loading notifications...</p>
                         </div>
+                    </div>
+                    <div id="loadMoreBtn" class="text-center p-3" style="display: none;">
+                        <button class="btn btn-outline-primary" onclick="loadMore()">
+                            <i class="fas fa-arrow-down"></i> Load More
+                        </button>
                     </div>
                 </div>
             </div>
@@ -27,42 +33,43 @@
 
 <script>
 let currentPage = 1;
-let loading = false;
+let totalPages = 1;
+let isLoading = false;
 
-function loadAllNotifications(page = 1) {
-    if (loading) return;
-    loading = true;
+function loadNotifications(page = 1) {
+    if (isLoading) return;
+    isLoading = true;
     
     $.ajax({
-        url: '/api/notifications',
+        url: '/api/notifications/all',
         method: 'GET',
-        data: { page: page, per_page: 20 },
+        data: { page: page, per_page: 10 },
         success: function(data) {
-            displayAllNotifications(data.notifications);
-            
-            if (data.pages > page) {
-                currentPage = page;
-                // Add load more button
-                if ($('#loadMoreBtn').length === 0) {
-                    $('#allNotificationsList').append(`
-                        <div class="text-center p-3" id="loadMoreBtn">
-                            <button class="btn btn-outline-primary" onclick="loadAllNotifications(${page + 1})">
-                                Load More
-                            </button>
-                        </div>
-                    `);
-                }
-            } else {
-                $('#loadMoreBtn').remove();
+            if (page === 1) {
+                $('#notificationsList').empty();
             }
             
-            loading = false;
+            displayNotifications(data.notifications);
+            totalPages = data.pages;
+            currentPage = data.current_page;
+            
+            if (data.has_next) {
+                $('#loadMoreBtn').show();
+            } else {
+                $('#loadMoreBtn').hide();
+            }
+            
+            isLoading = false;
+        },
+        error: function() {
+            $('#notificationsList').html('<div class="text-center p-5 text-danger">Error loading notifications</div>');
+            isLoading = false;
         }
     });
 }
 
-function displayAllNotifications(notifications) {
-    const container = $('#allNotificationsList');
+function displayNotifications(notifications) {
+    const container = $('#notificationsList');
     
     if (notifications.length === 0 && currentPage === 1) {
         container.html(`
@@ -75,24 +82,24 @@ function displayAllNotifications(notifications) {
         return;
     }
     
-    if (currentPage === 1) {
-        container.empty();
-    }
-    
     notifications.forEach(notification => {
-        let icon = getNotificationIcon(notification.type);
-        let bgColor = getNotificationColor(notification.type);
+        const icon = getNotificationIcon(notification.type);
+        const timeAgoText = getTimeAgo(notification.created_at);
+        const redirectUrl = getRedirectUrl(notification);
         
         container.append(`
-            <div class="notification-item p-3 border-bottom ${!notification.is_read ? 'bg-light' : ''}" data-id="${notification.id}">
+            <div class="notification-item p-3 border-bottom ${!notification.is_read ? 'bg-light' : ''}" 
+                 data-id="${notification.id}"
+                 style="cursor: pointer;"
+                 onclick="handleNotificationClick(${notification.id}, '${redirectUrl}')">
                 <div class="d-flex">
                     <div class="flex-shrink-0">
-                        <i class="${icon} fs-4" style="color: ${bgColor}"></i>
+                        <i class="${icon} fs-4 text-primary"></i>
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <div class="d-flex justify-content-between align-items-start">
                             <strong>${escapeHtml(notification.title)}</strong>
-                            <small class="text-muted">${timeAgo(notification.created_at)}</small>
+                            <small class="text-muted">${timeAgoText}</small>
                         </div>
                         <p class="mb-1">${escapeHtml(notification.message)}</p>
                         ${!notification.is_read ? '<span class="badge bg-primary">New</span>' : ''}
@@ -103,9 +110,110 @@ function displayAllNotifications(notifications) {
     });
 }
 
-// Load notifications on page load
+function getRedirectUrl(notification) {
+    switch(notification.type) {
+        case 'adoption': return `/adoption/${notification.reference_id}`;
+        case 'lost_found': return `/lost-found/${notification.reference_id}`;
+        case 'appointment': return `/dashboard`;
+        case 'approval': return `/approval-dashboard`;
+        default: return `/dashboard`;
+    }
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'approval': 'fas fa-user-check',
+        'adoption': 'fas fa-heart',
+        'lost_found': 'fas fa-search',
+        'appointment': 'fas fa-calendar-check',
+        'system': 'fas fa-bell'
+    };
+    return icons[type] || 'fas fa-bell';
+}
+
+function getTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+}
+
+function handleNotificationClick(notificationId, redirectUrl) {
+    $.ajax({
+        url: '/api/notifications/mark-read',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ notification_ids: [notificationId] }),
+        complete: function() {
+            window.location.href = redirectUrl;
+        }
+    });
+}
+
+function markAllRead() {
+    if (!confirm('Mark all notifications as read?')) return;
+    
+    $.ajax({
+        url: '/api/notifications/mark-read',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ notification_ids: [] }),
+        success: function() {
+            loadNotifications(1);
+            updateUnreadCount();
+        }
+    });
+}
+
+function loadMore() {
+    if (currentPage < totalPages) {
+        loadNotifications(currentPage + 1);
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updateUnreadCount() {
+    $.ajax({
+        url: '/api/notifications/count',
+        method: 'GET',
+        success: function(data) {
+            const badge = $('#notificationBadge');
+            if (data.count > 0) {
+                badge.text(data.count > 99 ? '99+' : data.count);
+                badge.show();
+            } else {
+                badge.hide();
+            }
+        }
+    });
+}
+
 $(document).ready(function() {
-    loadAllNotifications();
+    loadNotifications();
 });
 </script>
+
+<style>
+.notification-item {
+    transition: background-color 0.2s ease;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
 {% endblock %}

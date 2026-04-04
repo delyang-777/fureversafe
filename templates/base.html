@@ -17,8 +17,16 @@
             100% { transform: rotate(0deg); }
         }
         
-        .notification-bell-ring {
-            animation: bellRing 0.5s ease-in-out;
+        @keyframes fa-shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(15deg); }
+            50% { transform: rotate(-15deg); }
+            75% { transform: rotate(10deg); }
+            100% { transform: rotate(0deg); }
+        }
+        
+        .fa-shake {
+            animation: fa-shake 0.5s ease-in-out;
         }
         
         .notification-dropdown {
@@ -66,6 +74,26 @@
         
         .notification-item:hover .mark-read-btn {
             opacity: 1;
+        }
+        
+        /* Toast notification style */
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -115,9 +143,8 @@
                                 <div class="dropdown-item text-center text-muted">Loading...</div>
                             </div>
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-center" href="{{ url_for('notifications_page') }}">
-                                View all notifications
-                            </a>
+                            
+        
                         </div>
                     </li>
                     
@@ -135,7 +162,7 @@
                             <li><a class="dropdown-item" href="{{ url_for('create_adoption_listing') }}">Create Adoption Listing</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('approval_dashboard') }}">Approval Dashboard</a></li>
                             {% endif %}
-                            <li><a class="dropdown-item" href="{{ url_for('notifications_page') }}">Notifications</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('notifications') }}">Notifications</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
                         </ul>
@@ -201,15 +228,27 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     
-    <!-- Notification System JavaScript -->
+    <!-- Complete Notification System -->
     <script>
-        // Global variables
         let lastNotificationCount = 0;
         let notificationInterval;
         
-        // Get CSRF token from meta tag (add this to your head if needed)
-        function getCSRFToken() {
-            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        // Get redirect URL based on notification type
+        function getNotificationRedirectUrl(notification) {
+            switch(notification.type) {
+                case 'adoption':
+                    return `/adoption/${notification.reference_id}`;
+                case 'lost_found':
+                    return `/lost-found/${notification.reference_id}`;
+                case 'appointment':
+                    return `/dashboard`;
+                case 'approval':
+                    return `/approval-dashboard`;
+                case 'system':
+                    return `/education/${notification.reference_id}`;
+                default:
+                    return `/dashboard`;
+            }
         }
         
         // Load notifications for dropdown
@@ -217,25 +256,23 @@
             $.ajax({
                 url: '/api/notifications',
                 method: 'GET',
-                data: { page: 1, per_page: 10 },
+                timeout: 5000,
                 success: function(data) {
-                    displayNotifications(data.notifications);
-                    updateNotificationBadge(data.total);
-                    
-                    // Animate bell if new notifications
+                    displayDropdownNotifications(data.notifications);
                     if (data.total > lastNotificationCount) {
                         animateBell();
+                        showToast('New notification received!', 'info');
                     }
                     lastNotificationCount = data.total;
                 },
-                error: function(xhr) {
-                    console.error('Error loading notifications:', xhr);
+                error: function() {
+                    console.log('Error loading notifications');
                 }
             });
         }
         
         // Display notifications in dropdown
-        function displayNotifications(notifications) {
+        function displayDropdownNotifications(notifications) {
             const container = $('#notificationList');
             container.empty();
             
@@ -244,34 +281,96 @@
                 return;
             }
             
-            notifications.forEach(notification => {
+            notifications.slice(0, 10).forEach(notification => {
                 const icon = getNotificationIcon(notification.type);
-                const iconColor = getNotificationColor(notification.type);
-                const timeAgoText = timeAgo(notification.created_at);
+                const timeAgoText = getTimeAgo(notification.created_at);
+                const redirectUrl = getNotificationRedirectUrl(notification);
+                
+                let shortMessage = notification.message;
+                if (shortMessage.length > 70) {
+                    shortMessage = shortMessage.substring(0, 70) + '...';
+                }
                 
                 const notificationHtml = `
-                    <div class="notification-item ${!notification.is_read ? 'unread' : ''}" data-id="${notification.id}">
-                        <div class="d-flex p-3">
+                    <div class="notification-item ${!notification.is_read ? 'unread' : ''} p-2" 
+                         data-id="${notification.id}" 
+                         data-url="${redirectUrl}"
+                         onclick="handleNotificationClick(${notification.id}, '${redirectUrl}')">
+                        <div class="d-flex align-items-start">
                             <div class="flex-shrink-0">
-                                <i class="${icon} fs-5" style="color: ${iconColor}"></i>
+                                <i class="${icon} text-primary"></i>
                             </div>
-                            <div class="flex-grow-1 ms-3">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <strong class="small">${escapeHtml(notification.title)}</strong>
-                                    <small class="text-muted">${timeAgoText}</small>
-                                </div>
-                                <div class="small text-muted mt-1">${escapeHtml(notification.message)}</div>
+                            <div class="flex-grow-1 ms-2">
+                                <div class="small fw-bold">${escapeHtml(notification.title)}</div>
+                                <div class="small text-muted">${escapeHtml(shortMessage)}</div>
+                                <small class="text-muted" style="font-size: 10px;">${timeAgoText}</small>
                             </div>
-                            ${!notification.is_read ? `
-                            <button class="btn btn-sm btn-link text-muted mark-read-btn" onclick="markNotificationRead(${notification.id}, event)">
-                                <i class="fas fa-check-circle"></i>
-                            </button>
-                            ` : ''}
+                            ${!notification.is_read ? '<span class="badge bg-primary rounded-pill ms-1" style="font-size: 8px;">New</span>' : ''}
                         </div>
                     </div>
                 `;
                 container.append(notificationHtml);
             });
+            
+            if (notifications.length > 10) {
+                container.append('<div class="dropdown-item text-center small text-muted">+ ' + (notifications.length - 10) + ' more</div>');
+            }
+        }
+        
+        // Handle notification click - mark as read and redirect
+        function handleNotificationClick(notificationId, redirectUrl) {
+            $.ajax({
+                url: '/api/notifications/mark-read',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ notification_ids: [notificationId] }),
+                complete: function() {
+                    window.location.href = redirectUrl;
+                }
+            });
+        }
+        
+        // Mark all notifications as read
+        function markAllNotificationsRead() {
+            if (!confirm('Mark all notifications as read?')) return;
+            
+            $.ajax({
+                url: '/api/notifications/mark-read',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ notification_ids: [] }),
+                success: function() {
+                    $('#notificationList').html('<div class="dropdown-item text-center text-muted">No new notifications</div>');
+                    updateNotificationBadge(0);
+                    lastNotificationCount = 0;
+                    showToast('All notifications marked as read', 'success');
+                },
+                error: function() {
+                    showToast('Error marking notifications as read', 'danger');
+                }
+            });
+        }
+        
+        // Show toast message
+        function showToast(message, type) {
+            const toastHtml = `
+                <div class="toast-notification alert alert-${type === 'success' ? 'success' : type === 'danger' ? 'danger' : 'info'} shadow-lg">
+                    <div class="d-flex align-items-center">
+                        <div class="me-2">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} fa-lg"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close ms-3" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>
+                </div>
+            `;
+            
+            $('body').append(toastHtml);
+            setTimeout(() => {
+                $('.toast-notification').fadeOut(300, function() { $(this).remove(); });
+            }, 3000);
         }
         
         // Get icon for notification type
@@ -286,16 +385,20 @@
             return icons[type] || 'fas fa-bell';
         }
         
-        // Get color for notification type
-        function getNotificationColor(type) {
-            const colors = {
-                'approval': '#28a745',
-                'adoption': '#e83e8c',
-                'lost_found': '#fd7e14',
-                'appointment': '#17a2b8',
-                'system': '#6c757d'
-            };
-            return colors[type] || '#007bff';
+        // Get time ago string
+        function getTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            if (days < 7) return `${days}d ago`;
+            return date.toLocaleDateString();
         }
         
         // Update notification badge
@@ -312,102 +415,54 @@
         // Animate bell icon
         function animateBell() {
             const bell = $('#notificationBell i');
-            bell.addClass('notification-bell-ring');
+            bell.addClass('fa-shake');
             setTimeout(() => {
-                bell.removeClass('notification-bell-ring');
+                bell.removeClass('fa-shake');
             }, 500);
         }
         
-        // Mark single notification as read
-        function markNotificationRead(notificationId, event) {
-            if (event) {
-                event.stopPropagation();
-            }
-            
-            $.ajax({
-                url: '/api/notifications/mark-read',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ notification_ids: [notificationId] }),
-                success: function() {
-                    // Reload notifications
-                    loadNotifications();
-                }
-            });
-        }
-        
-        // Mark all notifications as read
-        function markAllNotificationsRead() {
-            $.ajax({
-                url: '/api/notifications/mark-read',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ notification_ids: [] }),
-                success: function() {
-                    loadNotifications();
-                }
-            });
-        }
-        
-        // Get unread count
+        // Update unread count
         function updateUnreadCount() {
             $.ajax({
                 url: '/api/notifications/count',
                 method: 'GET',
+                timeout: 3000,
                 success: function(data) {
                     updateNotificationBadge(data.count);
                 }
             });
         }
         
-        // Time ago function
-        function timeAgo(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const seconds = Math.floor((now - date) / 1000);
-            
-            if (seconds < 60) return 'just now';
-            const minutes = Math.floor(seconds / 60);
-            if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
-            const hours = Math.floor(minutes / 60);
-            if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-            const days = Math.floor(hours / 24);
-            if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
-            return date.toLocaleDateString();
-        }
-        
         // Escape HTML to prevent XSS
         function escapeHtml(text) {
+            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
         
-        // Load notifications when dropdown opens
+        // Initialize on page load
         $(document).ready(function() {
-            // Only initialize if user is logged in
             {% if current_user.is_authenticated %}
-            // Initial load
-            loadNotifications();
-            updateUnreadCount();
+            setTimeout(function() {
+                loadNotifications();
+                updateUnreadCount();
+            }, 500);
             
-            // Set interval to check for new notifications every 30 seconds
             notificationInterval = setInterval(function() {
                 updateUnreadCount();
-                // If dropdown is open, reload notifications
                 if ($('#notificationDropdown').hasClass('show')) {
                     loadNotifications();
                 }
-            }, 30000);
+            }, 60000);
             
-            // Reload notifications when dropdown opens
             $('#notificationBell').on('shown.bs.dropdown', function() {
                 loadNotifications();
             });
             {% endif %}
         });
         
-        // Clear interval on page unload (optional)
+        // Clear interval on page unload
         window.addEventListener('beforeunload', function() {
             if (notificationInterval) {
                 clearInterval(notificationInterval);

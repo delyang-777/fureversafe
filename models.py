@@ -134,13 +134,13 @@ class LostFound(db.Model):
 class EducationalResource(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
-    category = db.Column(db.String(100))  # training, health, nutrition, welfare
+    category = db.Column(db.String(100))
     content = db.Column(db.Text, nullable=False)
     author = db.Column(db.String(100))
-    thumbnail = db.Column(db.String(200))
+    thumbnail = db.Column(db.String(200))  # This can now store both images and videos
     views = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
