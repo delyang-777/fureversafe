@@ -1,0 +1,180 @@
+<!-- Chatbot Widget Component -->
+<div id="chatbot-container" class="chatbot-container">
+    <!-- Chatbot Toggle Button (Minimized) -->
+    <div id="chatbot-toggle" class="chatbot-toggle" title="Chat with FurEverSafe Assistant">
+        <i class="fas fa-comments"></i>
+        <span class="chatbot-badge" id="chatbot-badge">1</span>
+    </div>
+
+    <!-- Chatbot Widget (Full) -->
+    <div id="chatbot-widget" class="chatbot-widget" style="display: none;">
+        <!-- Header -->
+        <div class="chatbot-header">
+            <div class="chatbot-header-content">
+                <h3>🐕 FurEverSafe Assistant</h3>
+                <p>Ask me about adoption, health, training, and more!</p>
+            </div>
+            <button id="chatbot-close" class="chatbot-close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Messages Container -->
+        <div id="chatbot-messages" class="chatbot-messages">
+            <div class="chatbot-message bot-message">
+                <div class="message-content">
+                    <p>👋 Hi! I'm your FurEverSafe assistant. I can help you with:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px; text-align: left;">
+                        <li>Dog adoption tips</li>
+                        <li>Pet health advice</li>
+                        <li>Training guidance</li>
+                        <li>Lost dog assistance</li>
+                        <li>Feature navigation</li>
+                    </ul>
+                    <p>What can I help you with today?</p>
+                </div>
+                <span class="message-time">Now</span>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chatbot-input-area">
+            <input 
+                type="text" 
+                id="chatbot-input" 
+                class="chatbot-input" 
+                placeholder="Ask me anything..."
+                autocomplete="off"
+            >
+            <button id="chatbot-send" class="chatbot-send-btn" title="Send message">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Chatbot functionality
+    const chatbotToggle = document.getElementById('chatbot-toggle');
+    const chatbotWidget = document.getElementById('chatbot-widget');
+    const chatbotClose = document.getElementById('chatbot-close');
+    const chatbotInput = document.getElementById('chatbot-input');
+    const chatbotSend = document.getElementById('chatbot-send');
+    const chatbotMessages = document.getElementById('chatbot-messages');
+
+    let isOpen = false;
+
+    // Toggle chatbot
+    chatbotToggle.addEventListener('click', () => {
+        isOpen = !isOpen;
+        chatbotWidget.style.display = isOpen ? 'flex' : 'none';
+        chatbotToggle.style.display = isOpen ? 'none' : 'flex';
+        if (isOpen) {
+            chatbotInput.focus();
+        }
+    });
+
+    // Close chatbot
+    chatbotClose.addEventListener('click', () => {
+        isOpen = false;
+        chatbotWidget.style.display = 'none';
+        chatbotToggle.style.display = 'flex';
+    });
+
+    // Send message
+    async function sendMessage() {
+        const userMessage = chatbotInput.value.trim();
+        
+        if (!userMessage) return;
+
+        // Add user message
+        const userMessageEl = document.createElement('div');
+        userMessageEl.className = 'chatbot-message user-message';
+        userMessageEl.innerHTML = `
+            <div class="message-content"><p>${escapeHtml(userMessage)}</p></div>
+            <span class="message-time">Now</span>
+        `;
+        chatbotMessages.appendChild(userMessageEl);
+        chatbotInput.value = '';
+
+        // Scroll to bottom
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+        // Show typing indicator
+        const typingEl = document.createElement('div');
+        typingEl.className = 'chatbot-message bot-message typing';
+        typingEl.innerHTML = `
+            <div class="message-content">
+                <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        `;
+        chatbotMessages.appendChild(typingEl);
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+        try {
+            // Send to server
+            const response = await fetch('/api/chatbot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: userMessage })
+            });
+
+            const data = await response.json();
+
+            // Remove typing indicator
+            typingEl.remove();
+
+            // Add bot response
+            const botMessageEl = document.createElement('div');
+            botMessageEl.className = 'chatbot-message bot-message';
+            botMessageEl.innerHTML = `
+                <div class="message-content"><p>${data.response}</p></div>
+                <span class="message-time">Now</span>
+            `;
+            chatbotMessages.appendChild(botMessageEl);
+
+        } catch (error) {
+            console.error('Error:', error);
+            typingEl.remove();
+            
+            const errorEl = document.createElement('div');
+            errorEl.className = 'chatbot-message bot-message error-message';
+            errorEl.innerHTML = `
+                <div class="message-content"><p>Sorry, I encountered an error. Please try again.</p></div>
+                <span class="message-time">Now</span>
+            `;
+            chatbotMessages.appendChild(errorEl);
+        }
+
+        // Scroll to bottom
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+
+    // Send button click
+    chatbotSend.addEventListener('click', sendMessage);
+
+    // Send on Enter key
+    chatbotInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    // Escape HTML
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+</script>

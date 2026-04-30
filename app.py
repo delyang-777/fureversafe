@@ -11,6 +11,7 @@ from forms import *
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from flask_ckeditor import CKEditor
+from chatbot_service import process_chatbot_message
 import markdown
 from markdown.extensions.extra import ExtraExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
@@ -1179,6 +1180,31 @@ def track_reading():
         app.logger.info(f"Article {article_id} read for {time_spent} seconds")
     
     return jsonify({'success': True})
+
+@app.route('/api/chatbot', methods=['POST'])
+def chatbot():
+    """Chatbot API endpoint"""
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '').strip()
+        
+        if not user_message:
+            return jsonify({'response': 'Please ask me something! 😊'}), 400
+        
+        # Get chatbot response
+        response = process_chatbot_message(user_message)
+        
+        return jsonify({
+            'response': response,
+            'success': True
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Chatbot error: {str(e)}")
+        return jsonify({
+            'response': 'Sorry, I encountered an error. Please try again.',
+            'success': False
+        }), 500
 
 @app.route('/debug-templates')
 def debug_templates():

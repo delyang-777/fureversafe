@@ -1,0 +1,52 @@
+# Axolotl Configuration for FurEverSafe
+# Optimized for mid-end laptops
+
+# Model configuration
+base_model: mistralai/Mistral-7B-Instruct-v0.1
+model_type: mistral
+tokenizer_type: mistral
+tokenizer_legacy: false
+
+# Training data
+datasets:
+  - path: fureversafe_chatbot_training.jsonl
+    type: alpaca
+    conversation: false
+
+# Sequence settings
+sequence_len: 1024
+sample_packing: true
+pad_to_sequence_len: true
+
+# Training hyperparameters
+micro_batch_size: 4              # Per GPU batch size
+gradient_accumulation_steps: 4   # Effective batch = 16
+num_epochs: 3
+optimizer: adamw_bnb_8bit        # Memory efficient
+lr_scheduler: cosine
+learning_rate: 0.0001
+warmup_steps: 100
+warmup_ratio: 0.1
+weight_decay: 0.01
+max_grad_norm: 1.0
+
+# Output settings
+output_dir: ./fureversafe-axolotl-tuned
+save_steps: 100
+eval_steps: 50
+eval_strategy: steps
+logging_steps: 10
+save_total_limit: 2
+
+# Mixed precision
+bf16: true                       # Use bfloat16 if supported
+fp16: false                      # Or use fp16 if bf16 not available
+
+# Optimization
+flash_attention: true            # Use flash attention if available
+gradient_checkpointing: true     # Memory efficient
+ddp_find_unused_parameters: false
+
+# Monitoring
+report_to:
+  - none

@@ -1,0 +1,41 @@
+# FurEverSafe Dataset Fine-Tuning Requirements
+# Install with: pip install -r dataset_requirements.txt
+
+# Core ML Framework
+torch==2.1.0
+torchvision==0.16.0
+torchaudio==2.1.0
+
+# Transformers and Language Models
+transformers==4.35.0
+tokenizers==0.14.0
+datasets==2.14.0
+accelerate==0.24.0
+
+# Fine-tuning Frameworks (choose one or install both)
+llama-factory==0.3.0  # Recommended for easiest setup
+axolotl==0.4.0       # Alternative, more flexible
+
+# Optimization and Quantization
+bitsandbytes==0.41.0  # For 8-bit quantization
+peft==0.7.0           # Parameter efficient fine-tuning
+
+# Utilities
+huggingface-hub==0.18.0
+pyyaml==6.0
+numpy==1.24.0
+pandas==2.1.0
+scipy==1.11.0
+matplotlib==3.8.0
+tqdm==4.66.0
+
+# Optional: for better monitoring
+wandb==0.16.0         # Weights & Biases (remove if not using)
+tensorboard==2.15.0   # TensorBoard monitoring
+
+# Optional: for Ollama integration
+requests==2.31.0
+
+# Optional: for better notebook support
+jupyter==1.0.0
+ipykernel==6.26.0
