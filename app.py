@@ -18,6 +18,7 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 from werkzeug.utils import secure_filename
 from flask import request, current_app
 
+
 # Fix: Specify the template folder explicitly with absolute path
 template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')

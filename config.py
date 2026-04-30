@@ -5,7 +5,7 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///fureversafe.db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://neondb_owner:npg_QjPwJ7TU4EfD@ep-misty-mouse-ambs5ztr-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Upload settings - INCREASED FOR VIDEOS
