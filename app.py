@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, abort, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, abort, jsonify, Response, stream_with_context
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 import os
@@ -11,7 +11,7 @@ from forms import *
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from flask_ckeditor import CKEditor
-from chatbot_service import process_chatbot_message
+from chatbot_service import process_chatbot_message, process_chatbot_message_stream, init_ai_model
 import markdown
 from markdown.extensions.extra import ExtraExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
@@ -106,6 +106,9 @@ os.makedirs(os.path.join(app.template_folder, 'education'), exist_ok=True)
 os.makedirs(os.path.join(app.template_folder, 'dog_profile'), exist_ok=True)
 os.makedirs(os.path.join(app.template_folder, 'auth'), exist_ok=True)
 os.makedirs(os.path.join(app.template_folder, 'shelter'), exist_ok=True)
+
+# Initialize AI chatbot model
+init_ai_model(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1184,22 +1187,29 @@ def track_reading():
 
 @app.route('/api/chatbot', methods=['POST'])
 def chatbot():
-    """Chatbot API endpoint"""
+    """Chatbot API endpoint with token streaming"""
     try:
         data = request.get_json()
         user_message = data.get('message', '').strip()
-        
+
         if not user_message:
-            return jsonify({'response': 'Please ask me something! 😊'}), 400
-        
-        # Get chatbot response
-        response = process_chatbot_message(user_message)
-        
-        return jsonify({
-            'response': response,
-            'success': True
-        }), 200
-        
+            return jsonify({'response': 'Please ask me something!'}), 400
+
+        def generate():
+            yield f"data: {json.dumps({'thinking': True})}\n\n"
+            for token in process_chatbot_message_stream(user_message):
+                yield f"data: {json.dumps({'token': token})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+
+        return Response(
+            stream_with_context(generate()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no'
+            }
+        )
+
     except Exception as e:
         app.logger.error(f"Chatbot error: {str(e)}")
         return jsonify({
