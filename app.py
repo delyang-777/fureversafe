@@ -1389,5 +1389,7 @@ def pending_requests_count():
     return jsonify({'count': count})
 
 if __name__ == '__main__':
+    import webbrowser, threading
     port = int(os.environ.get('PORT', 8000))
+    threading.Timer(2, lambda: webbrowser.open(f'http://127.0.0.1:{port}')).start()
     app.run(host='0.0.0.0', port=port, debug=False)

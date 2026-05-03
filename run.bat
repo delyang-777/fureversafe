@@ -2,8 +2,6 @@
 REM FureverSafe - Master Launcher
 REM Runs setup if needed, then starts the server
 
-setlocal enabledelayedexpansion
-
 cls
 echo.
 echo ============================================================
