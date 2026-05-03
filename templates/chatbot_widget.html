@@ -11,7 +11,7 @@
         <!-- Header -->
         <div class="chatbot-header">
             <div class="chatbot-header-content">
-                <h3>🐕 FurEverSafe Assistant</h3>
+                <h3>FurEverSafe Assistant</h3>
                 <p>Ask me about adoption, health, training, and more!</p>
             </div>
             <button id="chatbot-close" class="chatbot-close-btn">
@@ -23,7 +23,7 @@
         <div id="chatbot-messages" class="chatbot-messages">
             <div class="chatbot-message bot-message">
                 <div class="message-content">
-                    <p>👋 Hi! I'm your FurEverSafe assistant. I can help you with:</p>
+                    <p>Hi! I'm your FurEverSafe assistant. I can help you with:</p>
                     <ul style="margin: 10px 0; padding-left: 20px; text-align: left;">
                         <li>Dog adoption tips</li>
                         <li>Pet health advice</li>
@@ -39,10 +39,10 @@
 
         <!-- Input Area -->
         <div class="chatbot-input-area">
-            <input 
-                type="text" 
-                id="chatbot-input" 
-                class="chatbot-input" 
+            <input
+                type="text"
+                id="chatbot-input"
+                class="chatbot-input"
                 placeholder="Ask me anything..."
                 autocomplete="off"
             >
@@ -54,7 +54,6 @@
 </div>
 
 <script>
-    // Chatbot functionality
     const chatbotToggle = document.getElementById('chatbot-toggle');
     const chatbotWidget = document.getElementById('chatbot-widget');
     const chatbotClose = document.getElementById('chatbot-close');
@@ -63,29 +62,28 @@
     const chatbotMessages = document.getElementById('chatbot-messages');
 
     let isOpen = false;
+    let isGenerating = false;
 
-    // Toggle chatbot
     chatbotToggle.addEventListener('click', () => {
         isOpen = !isOpen;
         chatbotWidget.style.display = isOpen ? 'flex' : 'none';
         chatbotToggle.style.display = isOpen ? 'none' : 'flex';
-        if (isOpen) {
-            chatbotInput.focus();
-        }
+        if (isOpen) chatbotInput.focus();
     });
 
-    // Close chatbot
     chatbotClose.addEventListener('click', () => {
         isOpen = false;
         chatbotWidget.style.display = 'none';
         chatbotToggle.style.display = 'flex';
     });
 
-    // Send message
     async function sendMessage() {
         const userMessage = chatbotInput.value.trim();
-        
-        if (!userMessage) return;
+        if (!userMessage || isGenerating) return;
+
+        isGenerating = true;
+        chatbotSend.disabled = true;
+        chatbotInput.disabled = true;
 
         // Add user message
         const userMessageEl = document.createElement('div');
@@ -96,85 +94,150 @@
         `;
         chatbotMessages.appendChild(userMessageEl);
         chatbotInput.value = '';
-
-        // Scroll to bottom
         chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
 
-        // Show typing indicator
-        const typingEl = document.createElement('div');
-        typingEl.className = 'chatbot-message bot-message typing';
-        typingEl.innerHTML = `
+        // Create bot response bubble (starts with thinking indicator)
+        const botMessageEl = document.createElement('div');
+        botMessageEl.className = 'chatbot-message bot-message';
+        botMessageEl.innerHTML = `
             <div class="message-content">
-                <div class="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                <div class="thinking-indicator">
+                    <span class="thinking-text">FurEverSafe is thinking</span>
+                    <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>
                 </div>
             </div>
+            <span class="message-time">Now</span>
         `;
-        chatbotMessages.appendChild(typingEl);
+        chatbotMessages.appendChild(botMessageEl);
         chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
 
+        const contentEl = botMessageEl.querySelector('.message-content');
+        let responseText = '';
+        let firstToken = true;
+
         try {
-            // Send to server
             const response = await fetch('/api/chatbot', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: userMessage })
             });
 
-            const data = await response.json();
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
 
-            // Remove typing indicator
-            typingEl.remove();
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-            // Add bot response
-            const botMessageEl = document.createElement('div');
-            botMessageEl.className = 'chatbot-message bot-message';
-            botMessageEl.innerHTML = `
-                <div class="message-content"><p>${data.response}</p></div>
-                <span class="message-time">Now</span>
-            `;
-            chatbotMessages.appendChild(botMessageEl);
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
 
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+
+                    const jsonStr = line.slice(6);
+                    let data;
+                    try {
+                        data = JSON.parse(jsonStr);
+                    } catch (e) {
+                        continue;
+                    }
+
+                    if (data.thinking) {
+                        // Already showing thinking indicator
+                        continue;
+                    }
+
+                    if (data.token) {
+                        if (firstToken) {
+                            contentEl.innerHTML = '<p class="streaming-cursor"></p>';
+                            firstToken = false;
+                        }
+                        responseText += data.token;
+                        // Show clean text while streaming (strip markdown artifacts)
+                        contentEl.querySelector('p').textContent = responseText.replace(/\*\*/g, '');
+                        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                    }
+
+                    if (data.done) {
+                        if (firstToken) {
+                            contentEl.innerHTML = '<p>I\'m sorry, could you rephrase your question?</p>';
+                        } else {
+                            contentEl.innerHTML = formatBotMessage(responseText);
+                        }
+                    }
+                }
+            }
         } catch (error) {
             console.error('Error:', error);
-            typingEl.remove();
-            
-            const errorEl = document.createElement('div');
-            errorEl.className = 'chatbot-message bot-message error-message';
-            errorEl.innerHTML = `
-                <div class="message-content"><p>Sorry, I encountered an error. Please try again.</p></div>
-                <span class="message-time">Now</span>
-            `;
-            chatbotMessages.appendChild(errorEl);
+            contentEl.innerHTML = '<p>Sorry, I encountered an error. Please try again.</p>';
         }
 
-        // Scroll to bottom
+        // Final format pass in case done event was missed
+        if (responseText && contentEl.querySelector('.streaming-cursor')) {
+            contentEl.innerHTML = formatBotMessage(responseText);
+        }
+
+        isGenerating = false;
+        chatbotSend.disabled = false;
+        chatbotInput.disabled = false;
+        chatbotInput.focus();
         chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
     }
 
-    // Send button click
     chatbotSend.addEventListener('click', sendMessage);
-
-    // Send on Enter key
     chatbotInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
+        if (e.key === 'Enter') sendMessage();
     });
 
-    // Escape HTML
     function escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
         return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function formatBotMessage(text) {
+        // Clean up raw text: remove all asterisks
+        text = text.replace(/\*\*/g, '').replace(/\*/g, '');
+
+        // Normalize line breaks: split on " - " that acts as list items
+        // Pattern: " - Item text" used inline by the model
+        // Also split on numbered patterns like "1." "2." "Step 1:" etc.
+        text = text.replace(/\s+-\s+/g, '\n- ');
+        text = text.replace(/(\d+[\.\)]\s)/g, '\n$1');
+        text = text.replace(/(Step\s+\d+[:\s])/gi, '\n$1');
+
+        let html = escapeHtml(text);
+
+        const lines = html.split('\n');
+        const result = [];
+        let inList = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            if (!line) continue;
+
+            const bulletMatch = line.match(/^[-•]\s*(.*)/);
+            const numberedMatch = line.match(/^(\d+[\.\)]\s*)(.*)/);
+            const stepMatch = line.match(/^(Step\s+\d+[:\s]*)(.*)/i);
+
+            if (bulletMatch || numberedMatch || stepMatch) {
+                if (!inList) { result.push('<ul>'); inList = true; }
+                let content;
+                if (bulletMatch) {
+                    content = bulletMatch[1];
+                } else if (stepMatch) {
+                    content = '<strong>' + stepMatch[1].trim() + '</strong> ' + stepMatch[2];
+                } else {
+                    content = '<strong>' + numberedMatch[1].trim() + '</strong> ' + numberedMatch[2];
+                }
+                result.push('<li>' + content + '</li>');
+            } else {
+                if (inList) { result.push('</ul>'); inList = false; }
+                result.push('<p>' + line + '</p>');
+            }
+        }
+        if (inList) result.push('</ul>');
+
+        return result.join('');
     }
 </script>

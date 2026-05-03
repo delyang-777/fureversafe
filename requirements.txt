@@ -1,3 +1,4 @@
+# Web Framework
 Flask==2.3.2
 Flask-SQLAlchemy==3.0.5
 Flask-Login==0.6.2
@@ -7,4 +8,27 @@ Werkzeug==2.3.6
 python-dotenv==1.0.0
 email-validator==2.0.0
 gunicorn==21.2.0
-flask-ckeditor==0.5.2
+flask-ckeditor==0.5.1
+Flask-Migrate==4.0.4
+Flask-Mail==0.9.1
+Markdown==3.4.1
+requests>=2.31.0
+
+# AI Server (FastAPI) - optional standalone mode
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.5.0
+
+# AI Chatbot Model - GGUF (primary, fast quantized inference)
+# Requires C++ compiler on Windows (Visual Studio Build Tools)
+# If install fails, try: pip install llama-cpp-python --prefer-binary
+llama-cpp-python>=0.3.0,<0.4
+
+# AI Chatbot Model - LoRA fallback (only needed if GGUF is unavailable)
+# These are large downloads (~3-5 GB). Skip if using GGUF.
+# To install: pip install -r requirements-lora.txt
+# torch>=2.5.1,<2.11
+# transformers>=4.48.0,<5.0
+# peft>=0.15.0,<1.0
+# accelerate>=1.2.0,<2.0
+# safetensors>=0.4.5

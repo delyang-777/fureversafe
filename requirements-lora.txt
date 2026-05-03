@@ -1,0 +1,13 @@
+# LoRA fallback dependencies (optional, ~3-5 GB download)
+# Only needed if the GGUF model file is missing or llama-cpp-python is unavailable.
+# Install with: pip install -r requirements-lora.txt
+
+-r requirements.txt
+
+# CPU-only PyTorch (much smaller than the full CUDA version)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.5.1,<2.11
+transformers>=4.48.0,<5.0
+peft>=0.15.0,<1.0
+accelerate>=1.2.0,<2.0
+safetensors>=0.4.5
