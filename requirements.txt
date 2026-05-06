@@ -20,9 +20,9 @@ uvicorn>=0.27.0
 pydantic>=2.5.0
 
 # AI Chatbot Model - GGUF (primary, fast quantized inference)
-# Requires C++ compiler on Windows (Visual Studio Build Tools)
-# If install fails, try: pip install llama-cpp-python --prefer-binary
-llama-cpp-python>=0.3.0,<0.4
+# Pin the known-good Windows-friendly build used by this project.
+# If install fails on a fresh machine, try: pip install llama-cpp-python==0.3.1 --prefer-binary
+llama-cpp-python==0.3.1
 
 # AI Chatbot Model - LoRA fallback (only needed if GGUF is unavailable)
 # These are large downloads (~3-5 GB). Skip if using GGUF.

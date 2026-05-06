@@ -1,6 +1,9 @@
 """
 FureverSafe Chatbot Client - Communicates with AI Server
-Replaces the old chatbot_service.py that loaded models directly
+Replaces the old chatbot_service.py that loaded models directly.
+
+Expected AI server model: datasets/ai_model/fureversafe-q8.gguf
+(produced by fureversafe_retrain_kaggle.ipynb — Q8_0 quantised TinyLlama)
 """
 
 import requests
@@ -10,8 +13,24 @@ from typing import Generator
 
 logger = logging.getLogger(__name__)
 
+# Preferred local AI model: datasets/ai_model/fureversafe-q4_k_m-v2.gguf
+
 # AI Server configuration
-AI_SERVER_URL = os.environ.get("AI_SERVER_URL", "http://127.0.0.1:5000")
+def _normalize_ai_server_url(raw_url: str | None) -> str:
+    """Normalize AI server URL loaded from env/.env."""
+    fallback = "http://127.0.0.1:5000"
+    value = (raw_url or fallback).strip().strip('"').strip("'")
+
+    if any(ch.isspace() for ch in value):
+        cleaned = "".join(value.split())
+        logger.warning("AI_SERVER_URL contained whitespace. Using normalized value: %s", cleaned)
+        value = cleaned
+
+    value = value.rstrip("/")
+    return value or fallback
+
+
+AI_SERVER_URL = _normalize_ai_server_url(os.environ.get("AI_SERVER_URL"))
 AI_SERVER_TIMEOUT = 30
 
 # Cache for connection status
@@ -35,7 +54,7 @@ def check_ai_server_health() -> bool:
         return False
 
 
-def process_chatbot_message(message: str, max_tokens: int = 100, temperature: float = 0.2) -> str:
+def process_chatbot_message(message: str, max_tokens: int = 200, temperature: float = 0.2) -> str:
     """
     Send a message to the AI server and get a response
     
@@ -79,7 +98,7 @@ def process_chatbot_message(message: str, max_tokens: int = 100, temperature: fl
         return f"An error occurred: {str(e)}"
 
 
-def process_chatbot_message_stream(message: str, max_tokens: int = 100, temperature: float = 0.2) -> Generator[str, None, None]:
+def process_chatbot_message_stream(message: str, max_tokens: int = 200, temperature: float = 0.2) -> Generator[str, None, None]:
     """
     Send a message to the AI server and stream tokens
     

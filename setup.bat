@@ -63,11 +63,20 @@ echo ============================================================
 echo.
 
 echo Installing from requirements.txt...
-pip install -r "%SCRIPT_DIR%requirements.txt" --upgrade
+echo Using existing compatible packages when already installed.
+echo Preferring binary wheels to avoid Windows long-path build failures.
+pip install --prefer-binary -r "%SCRIPT_DIR%requirements.txt"
 
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install requirements
-    echo Please check your internet connection and try again
+    echo.
+    echo Common Windows fix:
+    echo   1. Enable Windows Long Paths
+    echo   2. Re-run setup.bat
+    echo.
+    echo Project note:
+    echo   This setup now prefers binary wheels and avoids forced upgrades.
+    echo   If llama-cpp-python is already installed, it should be kept as-is.
     pause
     exit /b 1
 )
@@ -95,10 +104,12 @@ echo Step 5: Checking Model Files
 echo ============================================================
 echo.
 
-if exist "%SCRIPT_DIR%datasets\ai_model\fureversafe_q4_k_m.gguf" (
-    echo [OK] GGUF model found (primary - fast inference)
+if exist "%SCRIPT_DIR%datasets\ai_model\fureversafe-q4_k_m-v2.gguf" (
+    echo [OK] GGUF v2 model found (primary - fast inference)
+) else if exist "%SCRIPT_DIR%datasets\ai_model\fureversafe_q4_k_m.gguf" (
+    echo [OK] Legacy GGUF model found (fallback quantized inference)
 ) else (
-    echo [WARNING] GGUF model not found at datasets\ai_model\fureversafe_q4_k_m.gguf
+    echo [WARNING] GGUF model not found at datasets\ai_model\fureversafe-q4_k_m-v2.gguf
     echo The chatbot will try LoRA fallback, which is slower.
 )
 

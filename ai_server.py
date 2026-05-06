@@ -12,6 +12,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import json
 import logging
+from config import Config
 
 warnings.filterwarnings("ignore")
 
@@ -24,48 +25,83 @@ _llm = None
 _backend = None
 _lora_model = None
 _lora_tokenizer = None
+_loaded_model_path = None
 
-SYSTEM_PROMPT = "You are the FureverSafe AI assistant, dedicated to helping users with pet shelter information, adoption, and care."
+SYSTEM_PROMPT = Config.AI_SYSTEM_PROMPT + (
+    " Keep answers practical and easy to scan. Use short paragraphs or simple bullet points when that helps."
+)
 
 
 class ChatRequest(BaseModel):
     message: str
-    max_tokens: int = 200
-    temperature: float = 0.2
+    max_tokens: int = Config.AI_MAX_NEW_TOKENS
+    temperature: float = Config.AI_TEMPERATURE
+
+
+def _resolve_model_candidates(base_dir: str) -> list[str]:
+    """Build a deduplicated list of preferred GGUF model paths."""
+    configured_path = Config.GGUF_MODEL_PATH
+    if not os.path.isabs(configured_path):
+        configured_path = os.path.join(base_dir, configured_path)
+
+    candidates = [
+        configured_path,
+        os.path.join(base_dir, "datasets", "ai_model", "fureversafe-q4_k_m-v2.gguf"),
+        os.path.join(base_dir, "datasets", "ai_model", "fureversafe_q4_k_m.gguf"),
+        os.path.join(base_dir, "datasets", "ai_model", "fureversafe-q8.gguf"),
+        os.path.join(base_dir, "datasets", "ai_model", "fureversafe_f16.gguf"),
+    ]
+
+    deduped = []
+    seen = set()
+    for path in candidates:
+        normalized = os.path.normcase(os.path.abspath(path))
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(path)
+    return deduped
 
 
 def load_model():
     """Load GGUF model (primary) or LoRA (fallback)."""
-    global _llm, _backend, _lora_model, _lora_tokenizer
+    global _llm, _backend, _lora_model, _lora_tokenizer, _loaded_model_path
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    gguf_path = os.path.join(base_dir, "datasets", "ai_model", "fureversafe_q4_k_m.gguf")
 
-    if os.path.isfile(gguf_path):
-        try:
-            from llama_cpp import Llama
-            logger.info("Loading GGUF model: %s", os.path.basename(gguf_path))
-            _llm = Llama(
-                model_path=gguf_path,
-                n_gpu_layers=-1,
-                n_ctx=512,
-                verbose=False,
-            )
-            _backend = "gguf"
-            logger.info("AI backend: GGUF loaded successfully")
-            return True
-        except Exception as e:
-            logger.warning("GGUF load failed: %s", e)
+    # Priority 1: configured GGUF model, then known local fallbacks
+    gguf_paths = _resolve_model_candidates(base_dir)
+
+    for gguf_path in gguf_paths:
+        if os.path.isfile(gguf_path):
+            try:
+                from llama_cpp import Llama
+                logger.info("Loading GGUF model: %s", os.path.basename(gguf_path))
+                _llm = Llama(
+                    model_path=gguf_path,
+                    n_gpu_layers=Config.GGUF_N_GPU_LAYERS,
+                    n_ctx=Config.GGUF_N_CTX,
+                    verbose=False,
+                )
+                _backend = "gguf"
+                _loaded_model_path = gguf_path
+                logger.info("AI backend: GGUF loaded successfully (%s)", os.path.basename(gguf_path))
+                return True
+            except Exception as e:
+                logger.warning("GGUF load failed (%s): %s", os.path.basename(gguf_path), e)
+                continue
 
     # Fallback to LoRA
-    lora_path = os.path.join(base_dir, "datasets", "fureversafe_lora_model")
+    lora_path = Config.LORA_MODEL_PATH
+    if not os.path.isabs(lora_path):
+        lora_path = os.path.join(base_dir, lora_path)
     if os.path.isdir(lora_path):
         try:
             import torch
             from transformers import AutoTokenizer, AutoModelForCausalLM
             from peft import PeftModel
 
-            base_model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+            base_model_name = Config.LORA_BASE_MODEL
             logger.info("Loading LoRA fallback: %s + %s", base_model_name, lora_path)
             base_model = AutoModelForCausalLM.from_pretrained(
                 base_model_name, torch_dtype=torch.float32, device_map="cpu"
@@ -74,6 +110,7 @@ def load_model():
             _lora_model = PeftModel.from_pretrained(base_model, lora_path)
             _lora_model.eval()
             _backend = "lora"
+            _loaded_model_path = lora_path
             logger.info("AI backend: LoRA loaded successfully")
             return True
         except Exception as e:
@@ -153,7 +190,12 @@ async def startup_event():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model_loaded": _backend is not None, "backend": _backend}
+    return {
+        "status": "ok",
+        "model_loaded": _backend is not None,
+        "backend": _backend,
+        "model_path": _loaded_model_path,
+    }
 
 
 @app.post("/api/chat")

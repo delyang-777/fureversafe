@@ -3,7 +3,7 @@
     <!-- Chatbot Toggle Button (Minimized) -->
     <div id="chatbot-toggle" class="chatbot-toggle" title="Chat with FurEverSafe Assistant">
         <i class="fas fa-comments"></i>
-        <span class="chatbot-badge" id="chatbot-badge">1</span>
+        <span class="chatbot-badge" id="chatbot-badge" style="display: none;">AI</span>
     </div>
 
     <!-- Chatbot Widget (Full) -->
@@ -12,7 +12,11 @@
         <div class="chatbot-header">
             <div class="chatbot-header-content">
                 <h3>FurEverSafe Assistant</h3>
-                <p>Ask me about adoption, health, training, and more!</p>
+                <p>Local AI help for adoption, pet care, training, and rescue.</p>
+                <div id="chatbot-status" class="chatbot-status" data-state="checking">
+                    <span class="chatbot-status-dot" id="chatbot-status-dot"></span>
+                    <span id="chatbot-status-text">Checking AI service...</span>
+                </div>
             </div>
             <button id="chatbot-close" class="chatbot-close-btn">
                 <i class="fas fa-times"></i>
@@ -23,15 +27,9 @@
         <div id="chatbot-messages" class="chatbot-messages">
             <div class="chatbot-message bot-message">
                 <div class="message-content">
-                    <p>Hi! I'm your FurEverSafe assistant. I can help you with:</p>
-                    <ul style="margin: 10px 0; padding-left: 20px; text-align: left;">
-                        <li>Dog adoption tips</li>
-                        <li>Pet health advice</li>
-                        <li>Training guidance</li>
-                        <li>Lost dog assistance</li>
-                        <li>Feature navigation</li>
-                    </ul>
-                    <p>What can I help you with today?</p>
+                    <p>Hi! I’m your FurEverSafe assistant.</p>
+                    <p>I can help with adoption steps, lost and found concerns, training, feeding, health questions, and platform navigation.</p>
+                    <p>Tell me what’s going on, and I’ll do my best to guide you.</p>
                 </div>
                 <span class="message-time">Now</span>
             </div>
@@ -60,15 +58,20 @@
     const chatbotInput = document.getElementById('chatbot-input');
     const chatbotSend = document.getElementById('chatbot-send');
     const chatbotMessages = document.getElementById('chatbot-messages');
+    const chatbotStatus = document.getElementById('chatbot-status');
+    const chatbotStatusText = document.getElementById('chatbot-status-text');
 
     let isOpen = false;
     let isGenerating = false;
 
-    chatbotToggle.addEventListener('click', () => {
+    chatbotToggle.addEventListener('click', async () => {
         isOpen = !isOpen;
         chatbotWidget.style.display = isOpen ? 'flex' : 'none';
         chatbotToggle.style.display = isOpen ? 'none' : 'flex';
-        if (isOpen) chatbotInput.focus();
+        if (isOpen) {
+            chatbotInput.focus();
+            await refreshChatbotStatus();
+        }
     });
 
     chatbotClose.addEventListener('click', () => {
@@ -76,6 +79,44 @@
         chatbotWidget.style.display = 'none';
         chatbotToggle.style.display = 'flex';
     });
+
+    async function refreshChatbotStatus() {
+        setChatbotStatus('checking', 'Checking AI service...');
+
+        try {
+            const response = await fetch('/api/chatbot/status');
+            const data = await response.json();
+            if (data.online) {
+                setChatbotStatus('online', 'AI service online');
+            } else {
+                setChatbotStatus('offline', 'AI service offline');
+            }
+        } catch (error) {
+            console.error('Status check failed:', error);
+            setChatbotStatus('offline', 'AI service unavailable');
+        }
+    }
+
+    function setChatbotStatus(state, label) {
+        chatbotStatus.dataset.state = state;
+        chatbotStatusText.textContent = label;
+    }
+
+    function getTimeLabel() {
+        return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function appendMessage(role, html) {
+        const messageEl = document.createElement('div');
+        messageEl.className = `chatbot-message ${role}-message`;
+        messageEl.innerHTML = `
+            <div class="message-content">${html}</div>
+            <span class="message-time">${getTimeLabel()}</span>
+        `;
+        chatbotMessages.appendChild(messageEl);
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        return messageEl;
+    }
 
     async function sendMessage() {
         const userMessage = chatbotInput.value.trim();
@@ -85,35 +126,20 @@
         chatbotSend.disabled = true;
         chatbotInput.disabled = true;
 
-        // Add user message
-        const userMessageEl = document.createElement('div');
-        userMessageEl.className = 'chatbot-message user-message';
-        userMessageEl.innerHTML = `
-            <div class="message-content"><p>${escapeHtml(userMessage)}</p></div>
-            <span class="message-time">Now</span>
-        `;
-        chatbotMessages.appendChild(userMessageEl);
+        appendMessage('user', `<p>${escapeHtml(userMessage)}</p>`);
         chatbotInput.value = '';
-        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
 
-        // Create bot response bubble (starts with thinking indicator)
-        const botMessageEl = document.createElement('div');
-        botMessageEl.className = 'chatbot-message bot-message';
-        botMessageEl.innerHTML = `
-            <div class="message-content">
-                <div class="thinking-indicator">
-                    <span class="thinking-text">FurEverSafe is thinking</span>
-                    <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>
-                </div>
+        const botMessageEl = appendMessage('bot', `
+            <div class="thinking-indicator">
+                <span class="thinking-text">FurEverSafe is thinking</span>
+                <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>
             </div>
-            <span class="message-time">Now</span>
-        `;
-        chatbotMessages.appendChild(botMessageEl);
-        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        `);
 
         const contentEl = botMessageEl.querySelector('.message-content');
         let responseText = '';
         let firstToken = true;
+        let pendingChunk = '';
 
         try {
             const response = await fetch('/api/chatbot', {
@@ -122,6 +148,17 @@
                 body: JSON.stringify({ message: userMessage })
             });
 
+            if (!response.ok || !response.body) {
+                let errorMessage = 'Sorry, I encountered an error. Please try again.';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.response || errorData.detail || errorMessage;
+                } catch (parseError) {
+                    console.error('Failed to parse chatbot error payload:', parseError);
+                }
+                throw new Error(errorMessage);
+            }
+
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
 
@@ -129,51 +166,51 @@
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
+                pendingChunk += decoder.decode(value, { stream: true });
+                const events = pendingChunk.split('\n\n');
+                pendingChunk = events.pop() || '';
 
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
+                for (const eventBlock of events) {
+                    const lines = eventBlock.split('\n');
 
-                    const jsonStr = line.slice(6);
-                    let data;
-                    try {
-                        data = JSON.parse(jsonStr);
-                    } catch (e) {
-                        continue;
-                    }
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
 
-                    if (data.thinking) {
-                        // Already showing thinking indicator
-                        continue;
-                    }
-
-                    if (data.token) {
-                        if (firstToken) {
-                            contentEl.innerHTML = '<p class="streaming-cursor"></p>';
-                            firstToken = false;
+                        let data;
+                        try {
+                            data = JSON.parse(line.slice(6));
+                        } catch (error) {
+                            continue;
                         }
-                        responseText += data.token;
-                        // Show clean text while streaming (strip markdown artifacts)
-                        contentEl.querySelector('p').textContent = responseText.replace(/\*\*/g, '');
-                        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-                    }
 
-                    if (data.done) {
-                        if (firstToken) {
-                            contentEl.innerHTML = '<p>I\'m sorry, could you rephrase your question?</p>';
-                        } else {
-                            contentEl.innerHTML = formatBotMessage(responseText);
+                        if (data.thinking) {
+                            continue;
+                        }
+
+                        if (data.token) {
+                            if (firstToken) {
+                                contentEl.innerHTML = '<p class="streaming-cursor"></p>';
+                                firstToken = false;
+                            }
+                            responseText += data.token;
+                            contentEl.querySelector('p').textContent = cleanStreamingText(responseText);
+                            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                        }
+
+                        if (data.done) {
+                            contentEl.innerHTML = firstToken
+                                ? '<p>I am sorry, could you rephrase your question?</p>'
+                                : formatBotMessage(responseText);
                         }
                     }
                 }
             }
         } catch (error) {
             console.error('Error:', error);
-            contentEl.innerHTML = '<p>Sorry, I encountered an error. Please try again.</p>';
+            botMessageEl.classList.add('error-message');
+            contentEl.innerHTML = `<p>${escapeHtml(error.message || 'Sorry, I encountered an error. Please try again.')}</p>`;
         }
 
-        // Final format pass in case done event was missed
         if (responseText && contentEl.querySelector('.streaming-cursor')) {
             contentEl.innerHTML = formatBotMessage(responseText);
         }
@@ -186,58 +223,99 @@
     }
 
     chatbotSend.addEventListener('click', sendMessage);
-    chatbotInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
+    chatbotInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') sendMessage();
     });
 
     function escapeHtml(text) {
+        const value = String(text || '');
         const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-        return text.replace(/[&<>"']/g, m => map[m]);
+        return value.replace(/[&<>"']/g, (match) => map[match]);
+    }
+
+    function cleanStreamingText(text) {
+        return text
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/\*\*/g, '')
+            .replace(/\*/g, '')
+            .trimStart();
     }
 
     function formatBotMessage(text) {
-        // Clean up raw text: remove all asterisks
-        text = text.replace(/\*\*/g, '').replace(/\*/g, '');
+        const normalized = cleanStreamingText(text)
+            .replace(/\s+-\s+/g, '\n- ')
+            .replace(/(\d+[\.\)]\s)/g, '\n$1');
 
-        // Normalize line breaks: split on " - " that acts as list items
-        // Pattern: " - Item text" used inline by the model
-        // Also split on numbered patterns like "1." "2." "Step 1:" etc.
-        text = text.replace(/\s+-\s+/g, '\n- ');
-        text = text.replace(/(\d+[\.\)]\s)/g, '\n$1');
-        text = text.replace(/(Step\s+\d+[:\s])/gi, '\n$1');
+        const lines = normalized.split('\n');
+        const blocks = [];
+        let paragraph = [];
+        let bullets = [];
+        let numbers = [];
 
-        let html = escapeHtml(text);
-
-        const lines = html.split('\n');
-        const result = [];
-        let inList = false;
-
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
-            if (!line) continue;
-
-            const bulletMatch = line.match(/^[-•]\s*(.*)/);
-            const numberedMatch = line.match(/^(\d+[\.\)]\s*)(.*)/);
-            const stepMatch = line.match(/^(Step\s+\d+[:\s]*)(.*)/i);
-
-            if (bulletMatch || numberedMatch || stepMatch) {
-                if (!inList) { result.push('<ul>'); inList = true; }
-                let content;
-                if (bulletMatch) {
-                    content = bulletMatch[1];
-                } else if (stepMatch) {
-                    content = '<strong>' + stepMatch[1].trim() + '</strong> ' + stepMatch[2];
-                } else {
-                    content = '<strong>' + numberedMatch[1].trim() + '</strong> ' + numberedMatch[2];
-                }
-                result.push('<li>' + content + '</li>');
-            } else {
-                if (inList) { result.push('</ul>'); inList = false; }
-                result.push('<p>' + line + '</p>');
-            }
+        function flushParagraph() {
+            if (!paragraph.length) return;
+            blocks.push(`<p>${escapeHtml(paragraph.join(' '))}</p>`);
+            paragraph = [];
         }
-        if (inList) result.push('</ul>');
 
-        return result.join('');
+        function flushBullets() {
+            if (!bullets.length) return;
+            blocks.push(`<ul>${bullets.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`);
+            bullets = [];
+        }
+
+        function flushNumbers() {
+            if (!numbers.length) return;
+            blocks.push(`<ol>${numbers.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ol>`);
+            numbers = [];
+        }
+
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+
+            if (!line) {
+                flushParagraph();
+                flushBullets();
+                flushNumbers();
+                continue;
+            }
+
+            const bulletMatch = line.match(/^[-*]\s+(.*)$/);
+            if (bulletMatch) {
+                flushParagraph();
+                flushNumbers();
+                bullets.push(bulletMatch[1]);
+                continue;
+            }
+
+            const numberMatch = line.match(/^\d+[\.\)]\s+(.*)$/);
+            if (numberMatch) {
+                flushParagraph();
+                flushBullets();
+                numbers.push(numberMatch[1]);
+                continue;
+            }
+
+            if (/^[A-Za-z][A-Za-z\s&/]+:\s*$/.test(line)) {
+                flushParagraph();
+                flushBullets();
+                flushNumbers();
+                blocks.push(`<p class="message-label">${escapeHtml(line)}</p>`);
+                continue;
+            }
+
+            flushBullets();
+            flushNumbers();
+            paragraph.push(line);
+        }
+
+        flushParagraph();
+        flushBullets();
+        flushNumbers();
+
+        return blocks.join('') || '<p>I am sorry, could you rephrase your question?</p>';
     }
+
+    refreshChatbotStatus();
 </script>

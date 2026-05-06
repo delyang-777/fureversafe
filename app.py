@@ -11,7 +11,13 @@ from forms import *
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from flask_ckeditor import CKEditor
-from chatbot_service import process_chatbot_message, process_chatbot_message_stream, init_ai_model
+from chatbot_client import (
+    AI_SERVER_URL,
+    check_ai_server_health,
+    process_chatbot_message,
+    process_chatbot_message_stream,
+    init_ai_model,
+)
 import markdown
 from markdown.extensions.extra import ExtraExtension
 from markdown.extensions.codehilite import CodeHiliteExtension
@@ -1216,6 +1222,16 @@ def chatbot():
             'response': 'Sorry, I encountered an error. Please try again.',
             'success': False
         }), 500
+
+
+@app.route('/api/chatbot/status')
+def chatbot_status():
+    """Expose chatbot service health for the widget UI."""
+    online = check_ai_server_health()
+    return jsonify({
+        'online': online,
+        'service_url': AI_SERVER_URL
+    })
 
 @app.route('/debug-templates')
 def debug_templates():
