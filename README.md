@@ -6,6 +6,8 @@
 
 ## Quick Start
 
+For the current Windows developer workflow, see [DEVELOPER_START.md](C:\Users\fosta\OneDrive\Desktop\commision\fureversafe\DEVELOPER_START.md).
+
 ### Prerequisites
 - **Python** 3.10+
 - **pip** (Python package manager)
