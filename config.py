@@ -22,7 +22,7 @@ class Config:
         os.path.dirname(os.path.abspath(__file__)), 'datasets', 'ai_model', 'fureversafe-q4_k_m-v2.gguf'
     )
     GGUF_N_GPU_LAYERS = int(os.environ.get('GGUF_N_GPU_LAYERS', -1))
-    GGUF_N_CTX = int(os.environ.get('GGUF_N_CTX', 1024))
+    GGUF_N_CTX = int(os.environ.get('GGUF_N_CTX', 2048))
 
     LORA_MODEL_PATH = os.environ.get('LORA_MODEL_PATH') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'datasets', 'fureversafe_lora_model')
     LORA_BASE_MODEL = os.environ.get('LORA_BASE_MODEL') or 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
