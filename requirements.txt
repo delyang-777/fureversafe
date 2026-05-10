@@ -19,10 +19,9 @@ fastapi>=0.109.0
 uvicorn>=0.27.0
 pydantic>=2.5.0
 
-# AI Chatbot Model - GGUF (primary, fast quantized inference)
-# Pin the known-good Windows-friendly build used by this project.
-# If install fails on a fresh machine, try: pip install llama-cpp-python==0.3.1 --prefer-binary
-llama-cpp-python==0.3.1
+# AI Chatbot Model (llama-cpp-python) is installed separately by setup.bat
+# via the official prebuilt CPU wheel index to avoid requiring a C++ compiler.
+# Manual install: pip install llama-cpp-python --prefer-binary --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 
 # AI Chatbot Model - LoRA fallback (only needed if GGUF is unavailable)
 # These are large downloads (~3-5 GB). Skip if using GGUF.
